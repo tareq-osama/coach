@@ -108,13 +108,6 @@ const navSections = [
       { href: "/app/reports", label: "Reports", icon: icons.chart },
     ],
   },
-  {
-    title: "Settings",
-    links: [
-      { href: "/app/page-setup", label: "Page Setup", icon: icons.cog },
-      { href: "/app/settings", label: "Settings", icon: icons.cog },
-    ],
-  },
 ];
 
 export default function AppLayout({ children }) {
@@ -140,7 +133,7 @@ export default function AppLayout({ children }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-default-100">
+      <div className="flex min-h-screen items-center justify-center bg-default-100 dark:bg-default-50">
         <Spinner size="lg" color="primary" />
       </div>
     );
@@ -151,7 +144,7 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="gym-app flex min-h-screen bg-default-100">
+    <div className="gym-app flex min-h-screen bg-default-100 dark:bg-default-50">
       {/* Sidebar overlay (mobile) */}
       <Button
         isIconOnly
