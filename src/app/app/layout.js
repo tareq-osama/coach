@@ -196,7 +196,7 @@ export default function AppLayout({ children }) {
             <nav className="flex flex-col gap-6 px-3 pb-4 pt-1">
               {navSections.map((section) => (
                 <div key={section.title} className="gym-sidebar-section">
-                  <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold uppercase tracking-wider text-default-500">
+                  <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold tracking-wider text-default-500">
                     {section.title}
                   </p>
                   <ul className="space-y-0.5">
