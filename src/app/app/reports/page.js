@@ -2,13 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { parseDate } from "@internationalized/date";
 import { useGymList } from "../use-gym-list";
 import {
-  Card,
-  CardBody,
-  CardHeader,
   Button,
-  Input,
   Spinner,
   Select,
   SelectItem,
@@ -19,6 +16,7 @@ import {
   TableRow,
   TableCell,
   Chip,
+  DateRangePicker,
 } from "@heroui/react";
 
 const defaultFrom = () => {
@@ -54,34 +52,37 @@ export default function ReportsPage() {
   const [memberId, setMemberId] = useState("");
   const [fromDate, setFromDate] = useState(defaultFrom());
   const [toDate, setToDate] = useState(defaultTo());
-  const [applied, setApplied] = useState({ memberId: "", from: defaultFrom(), to: defaultTo() });
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const applyFilters = () => setApplied({ memberId, from: fromDate, to: toDate });
+  const dateRangeValue = useMemo(
+    () => ({ start: parseDate(fromDate), end: parseDate(toDate) }),
+    [fromDate, toDate]
+  );
+
   const resetFilters = () => {
     setMemberId("");
     setFromDate(defaultFrom());
     setToDate(defaultTo());
-    setApplied({ memberId: "", from: defaultFrom(), to: defaultTo() });
   };
 
   const filtered = useMemo(() => {
-    const from = new Date(applied.from);
-    const to = new Date(applied.to);
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
     to.setHours(23, 59, 59, 999);
     const inRange = (dateStr) => {
       const d = new Date(dateStr);
       return d >= from && d <= to;
     };
-    const byMember = (item) => !applied.memberId || item.member_id === applied.memberId;
+    const byMember = (item) => !memberId || item.member_id === memberId;
     return {
       sessions: (sessions ?? []).filter((s) => byMember(s) && inRange(s.session_date)),
       mealLogs: (mealLogs ?? []).filter((l) => byMember(l) && inRange(l.log_date)),
       progressPhotos: (progressPhotos ?? []).filter((p) => byMember(p) && inRange(p.photo_date)),
     };
-  }, [sessions, mealLogs, progressPhotos, applied]);
+  }, [sessions, mealLogs, progressPhotos, memberId, fromDate, toDate]);
 
   const summary = useMemo(() => {
-    const total = (sessions ?? []).filter((s) => !applied.memberId || s.member_id === applied.memberId).length;
+    const total = (sessions ?? []).filter((s) => !memberId || s.member_id === memberId).length;
     const inPeriod = filtered.sessions.length;
     const progressEntries = filtered.progressPhotos.length;
     return {
@@ -91,7 +92,7 @@ export default function ReportsPage() {
       progressEntries,
       weightChange: "—",
     };
-  }, [sessions, applied.memberId, filtered]);
+  }, [sessions, memberId, filtered]);
 
   const sessionsPerWeek = useMemo(() => {
     const byWeek = {};
@@ -170,129 +171,131 @@ export default function ReportsPage() {
       <h1 className="text-2xl font-semibold text-foreground">Reports & Analytics</h1>
 
       {/* Filters */}
-      <Card>
-        <CardBody className="gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <Select
-              label="Select Member"
-              placeholder="All members"
-              selectedKeys={memberId ? [memberId] : []}
-              onSelectionChange={(keys) => setMemberId(Array.from(keys)[0] ?? "")}
-              className="min-w-[200px]"
-            >
-              {(members ?? []).map((m) => (
-                <SelectItem key={m.$id}>{m.name || m.email || m.$id}</SelectItem>
-              ))}
-            </Select>
-            <Input type="date" label="From Date" value={fromDate} onValueChange={setFromDate} size="sm" className="max-w-[180px]" />
-            <Input type="date" label="To Date" value={toDate} onValueChange={setToDate} size="sm" className="max-w-[180px]" />
-            <div className="flex gap-2">
-              <Button color="primary" size="sm" onPress={applyFilters}>
-                Apply Filters
-              </Button>
-              <Button variant="bordered" size="sm" onPress={resetFilters}>
-                Reset
-              </Button>
-            </div>
+      <div className="rounded-lg border border-default-200 p-4 gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <Select
+            label="Member"
+            placeholder="Select Member"
+            selectedKeys={memberId ? [memberId] : []}
+            onSelectionChange={(keys) => setMemberId(Array.from(keys)[0] ?? "")}
+            size="sm"
+            className="w-[200px] shrink-0"
+          >
+            {(members ?? []).map((m) => (
+              <SelectItem key={m.$id}>{m.name || m.email || m.$id}</SelectItem>
+            ))}
+          </Select>
+          <div
+            className="w-[280px] shrink-0 cursor-pointer"
+            onClick={() => setDatePickerOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && setDatePickerOpen(true)}
+            aria-label="Open date range picker"
+          >
+            <DateRangePicker
+              label="Date range"
+              value={dateRangeValue}
+              onChange={(range) => {
+                if (range?.start && range?.end) {
+                  setFromDate(range.start.toString());
+                  setToDate(range.end.toString());
+                }
+              }}
+              isOpen={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              size="sm"
+              className="w-full pointer-events-none"
+              visibleMonths={2}
+            />
           </div>
-          <p className="text-sm text-default-500">
-            Showing data from {formatDate(applied.from)} to {formatDate(applied.to)}
-            {applied.memberId && ` for ${memberMap[applied.memberId] ?? applied.memberId}`}.
-          </p>
-        </CardBody>
-      </Card>
-
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardBody className="py-4">
-            <p className="text-tiny text-default-500 uppercase font-semibold">Total Sessions</p>
-            <p className="text-2xl font-bold text-primary">{summary.totalSessions}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="py-4">
-            <p className="text-tiny text-default-500 uppercase font-semibold">In Period</p>
-            <p className="text-2xl font-bold text-success">{summary.inPeriod}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="py-4">
-            <p className="text-tiny text-default-500 uppercase font-semibold">Current Streak</p>
-            <p className="text-2xl font-bold text-danger">{summary.currentStreak}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="py-4">
-            <p className="text-tiny text-default-500 uppercase font-semibold">Progress Entries</p>
-            <p className="text-2xl font-bold text-warning">{summary.progressEntries}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="py-4">
-            <p className="text-tiny text-default-500 uppercase font-semibold">Weight Change</p>
-            <p className="text-2xl font-bold text-foreground">{summary.weightChange}</p>
-          </CardBody>
-        </Card>
+          <Button variant="bordered" size="sm" onPress={resetFilters} className="shrink-0 pb-0.5">
+            Reset
+          </Button>
+        </div>
+        <p className="mt-2 text-sm text-default-500">
+          Showing data from {formatDate(fromDate)} to {formatDate(toDate)}
+          {memberId && ` for ${memberMap[memberId] ?? memberId}`}.
+        </p>
       </div>
 
-      {/* Weight & Measurements Progress (placeholder: no weight/measurements in data yet) */}
-      <Card>
-        <CardHeader className="pb-2">
-          <h2 className="text-lg font-medium text-foreground">
-            Weight & Measurements Progress ({formatDate(applied.from)} to {formatDate(applied.to)})
-          </h2>
-          <div className="flex gap-2">
-            <Chip size="sm" color="primary" variant="flat">Weight (kg)</Chip>
-            <Chip size="sm" color="danger" variant="flat">Waist (cm)</Chip>
-          </div>
-        </CardHeader>
-        <CardBody className="pt-0 min-h-[200px] flex items-center justify-center">
-          <p className="text-default-500 text-sm">Add weight and measurements to progress entries to see this chart.</p>
-        </CardBody>
-      </Card>
+      {/* Summary */}
+      <div className="grid gap-4 rounded-lg border border-default-200 p-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="py-2">
+          <p className="text-tiny text-default-500 uppercase font-semibold">Total Sessions</p>
+          <p className="text-2xl font-bold text-primary">{summary.totalSessions}</p>
+        </div>
+        <div className="py-2">
+          <p className="text-tiny text-default-500 uppercase font-semibold">In Period</p>
+          <p className="text-2xl font-bold text-success">{summary.inPeriod}</p>
+        </div>
+        <div className="py-2">
+          <p className="text-tiny text-default-500 uppercase font-semibold">Current Streak</p>
+          <p className="text-2xl font-bold text-danger">{summary.currentStreak}</p>
+        </div>
+        <div className="py-2">
+          <p className="text-tiny text-default-500 uppercase font-semibold">Progress Entries</p>
+          <p className="text-2xl font-bold text-warning">{summary.progressEntries}</p>
+        </div>
+        <div className="py-2">
+          <p className="text-tiny text-default-500 uppercase font-semibold">Weight Change</p>
+          <p className="text-2xl font-bold text-foreground">{summary.weightChange}</p>
+        </div>
+      </div>
 
-      {/* Training Frequency bar chart */}
-      <Card>
-        <CardHeader className="pb-2">
+      {/* Weight & Measurements Progress */}
+      <section className="rounded-lg border border-default-200 p-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-medium text-foreground">
-            Training Frequency ({formatDate(applied.from)} to {formatDate(applied.to)})
+            Weight & Measurements Progress ({formatDate(fromDate)} to {formatDate(toDate)})
+          </h2>
+          <Chip size="sm" color="primary" variant="flat">Weight (kg)</Chip>
+          <Chip size="sm" color="danger" variant="flat">Waist (cm)</Chip>
+        </div>
+        <div className="min-h-[120px] flex items-center">
+          <p className="text-default-500 text-sm">Add weight and measurements to progress entries to see this chart.</p>
+        </div>
+      </section>
+
+      {/* Training Frequency */}
+      <section className="rounded-lg border border-default-200 p-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-medium text-foreground">
+            Training Frequency ({formatDate(fromDate)} to {formatDate(toDate)})
           </h2>
           <Chip size="sm" color="success" variant="flat">Sessions per week</Chip>
-        </CardHeader>
-        <CardBody className="pt-0">
-          {sessionsPerWeek.length === 0 ? (
-            <p className="py-8 text-center text-default-500">No sessions in this period.</p>
-          ) : (
-            <div className="flex items-end gap-1 h-48">
-              {sessionsPerWeek.map(({ week, count }) => {
-                const maxCount = Math.max(...sessionsPerWeek.map((x) => x.count), 1);
-                const barHeight = Math.max(8, (count / maxCount) * 160);
-                return (
-                  <div key={week} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${week}: ${count} sessions`}>
-                    <div
-                      className="w-full rounded-t bg-success"
-                      style={{ height: `${barHeight}px` }}
-                    />
-                    <span className="text-tiny text-default-400 truncate max-w-full">{new Date(week).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+        </div>
+        {sessionsPerWeek.length === 0 ? (
+          <p className="py-8 text-default-500">No sessions in this period.</p>
+        ) : (
+          <div className="flex items-end gap-1 h-48">
+            {sessionsPerWeek.map(({ week, count }) => {
+              const maxCount = Math.max(...sessionsPerWeek.map((x) => x.count), 1);
+              const barHeight = Math.max(8, (count / maxCount) * 160);
+              return (
+                <div key={week} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${week}: ${count} sessions`}>
+                  <div
+                    className="w-full rounded-t bg-success"
+                    style={{ height: `${barHeight}px` }}
+                  />
+                  <span className="text-tiny text-default-400 truncate max-w-full">{new Date(week).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-      {/* Two tables: Recent Progress Logs | Recent Meal Logs */}
+      {/* Recent Progress Logs | Recent Meal Logs */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <section className="rounded-lg border border-default-200 p-4">
+          <div className="mb-2 flex flex-row items-center justify-between">
             <h2 className="text-lg font-medium text-foreground">Recent Progress Logs</h2>
             <Button as={Link} href="/app/members" size="sm" variant="light">
               View All →
             </Button>
-          </CardHeader>
-          <CardBody className="pt-0 overflow-auto max-h-80">
+          </div>
+          <div className="overflow-auto max-h-80">
             {recentProgress.length === 0 ? (
               <p className="py-4 text-sm text-default-500">No progress entries in this period.</p>
             ) : (
@@ -317,16 +320,16 @@ export default function ReportsPage() {
                 </TableBody>
               </Table>
             )}
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          </div>
+        </section>
+        <section className="rounded-lg border border-default-200 p-4">
+          <div className="mb-2 flex flex-row items-center justify-between">
             <h2 className="text-lg font-medium text-foreground">Recent Meal Logs</h2>
             <Button as={Link} href="/app/meal-logs" size="sm" variant="light">
               View All →
             </Button>
-          </CardHeader>
-          <CardBody className="pt-0 overflow-auto max-h-80">
+          </div>
+          <div className="overflow-auto max-h-80">
             {recentMealLogs.length === 0 ? (
               <p className="py-4 text-sm text-default-500">No meal logs in this period.</p>
             ) : (
@@ -351,19 +354,19 @@ export default function ReportsPage() {
                 </TableBody>
               </Table>
             )}
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       </div>
 
       {/* Recent Training Sessions */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <section className="rounded-lg border border-default-200 p-4">
+        <div className="mb-2 flex flex-row items-center justify-between">
           <h2 className="text-lg font-medium text-foreground">Recent Training Sessions</h2>
           <Button as={Link} href="/app/sessions" size="sm" variant="light">
             View All →
           </Button>
-        </CardHeader>
-        <CardBody className="pt-0 overflow-auto max-h-80">
+        </div>
+        <div className="overflow-auto max-h-80">
           {recentSessions.length === 0 ? (
             <p className="py-4 text-sm text-default-500">No sessions in this period.</p>
           ) : (
@@ -398,23 +401,21 @@ export default function ReportsPage() {
               </TableBody>
             </Table>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       {/* Export Data */}
-      <Card>
-        <CardHeader className="pb-2">
-          <h2 className="text-lg font-medium text-foreground">Export Data</h2>
-        </CardHeader>
-        <CardBody className="pt-0 flex flex-row gap-3 flex-wrap">
+      <section className="rounded-lg border border-default-200 p-4">
+        <h2 className="mb-2 text-lg font-medium text-foreground">Export Data</h2>
+        <div className="flex flex-wrap gap-3">
           <Button variant="bordered" color="primary" onPress={exportSessionsToCsv}>
             Export Sessions to CSV
           </Button>
           <Button variant="bordered" color="primary" onPress={exportProgressToCsv}>
             Export Progress to CSV
           </Button>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }
