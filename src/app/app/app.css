@@ -1,0 +1,58 @@
+/* Gym Coach app overrides */
+.gym-app {
+  font-family: inherit;
+}
+
+/* Sidebar: theme-aware shadow */
+.gym-sidebar {
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+}
+.dark .gym-sidebar {
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Sidebar scroll: theme-aware scrollbar */
+.gym-sidebar .gym-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #a1a1aa #e4e4e7;
+}
+.gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar,
+.gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar {
+  width: 6px;
+}
+.gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-track,
+.gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-track {
+  background: #e4e4e7;
+}
+.gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-thumb,
+.gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-thumb {
+  background: #a1a1aa;
+  border-radius: 3px;
+}
+.gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
+.dark .gym-sidebar .gym-sidebar-scroll {
+  scrollbar-color: #52525b #27272a;
+}
+.dark .gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-track,
+.dark .gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-track {
+  background: #27272a;
+}
+.dark .gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-thumb,
+.dark .gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-thumb {
+  background: #52525b;
+}
+.dark .gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.dark .gym-sidebar [class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
+
+.gym-sidebar-section {
+  scroll-margin-top: 0.5rem;
+}
+
+.gym-main {
+  min-height: 100vh;
+}

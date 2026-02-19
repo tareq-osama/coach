@@ -8,6 +8,7 @@ import { AppwriteException } from "appwrite";
 import NextjsLogo from "../static/nextjs-icon.svg";
 import AppwriteLogo from "../static/appwrite-icon.svg";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   const [detailHeight, setDetailHeight] = useState(55);
@@ -89,9 +90,9 @@ export default function Home() {
         <div
           className={`flex w-38 items-center transition-opacity duration-2500 ${status === "success" ? "opacity-100" : "opacity-0"}`}
         >
-          <div className="to-[rgba(253, 54, 110, 0.15)] h-[1px] flex-1 bg-gradient-to-l from-[#f02e65]"></div>
+          <div className="to-[rgba(253, 54, 110, 0.15)] h-px flex-1 bg-linear-to-l from-[#f02e65]"></div>
           <div className="icon-check flex h-5 w-5 items-center justify-center rounded-full border border-[#FD366E52] bg-[#FD366E14] text-[#FD366E]"></div>
-          <div className="to-[rgba(253, 54, 110, 0.15)] h-[1px] flex-1 bg-gradient-to-r from-[#f02e65]"></div>
+          <div className="to-[rgba(253, 54, 110, 0.15)] h-px flex-1 bg-linear-to-r from-[#f02e65]"></div>
         </div>
         <div className="rounded-[25%] border border-[#19191C0A] bg-[#F9F9FA] p-3 shadow-[0px_9.36px_9.36px_0px_hsla(0,0%,0%,0.04)]">
           <div className="rounded-[25%] border border-[#FAFAFB] bg-white p-5 shadow-[0px_2px_12px_0px_hsla(0,0%,0%,0.03)] lg:p-9">
@@ -201,6 +202,20 @@ export default function Home() {
             </p>
           </div>
         </a>
+
+        <Link href="/app">
+          <div className="flex h-full w-72 flex-col gap-2 rounded-md border border-[#EDEDF0] bg-white p-4">
+            <div className="flex flex-row items-center justify-between">
+              <h2 className="text-xl font-light text-[#2D2D31]">
+                Gym Coach
+              </h2>
+              <span className="icon-arrow-right text-[#D8D8DB]"></span>
+            </div>
+            <p>
+              Manage clients, exercises, workout plans, meals, and more.
+            </p>
+          </div>
+        </Link>
       </div>
 
       <aside className="fixed bottom-0 flex w-full cursor-pointer border-t border-[#EDEDF0] bg-white">
@@ -244,7 +259,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="flex-grow">
+            <div className="grow">
               <table className="w-full">
                 <thead>
                   <tr className="border-y border-[#EDEDF0] bg-[#FAFAFB] text-[#97979B]">
