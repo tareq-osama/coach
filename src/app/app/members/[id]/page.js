@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardBody, Button, Spinner } from "@heroui/react";
+import ProgressPhotosSection from "./ProgressPhotosSection";
 
 export default function MemberDetailPage() {
   const params = useParams();
@@ -75,6 +76,10 @@ export default function MemberDetailPage() {
           </dl>
         </CardBody>
       </Card>
+
+      <div className="mt-6">
+        <ProgressPhotosSection memberId={member.$id} />
+      </div>
     </div>
   );
 }

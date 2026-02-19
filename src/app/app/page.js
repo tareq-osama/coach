@@ -40,10 +40,9 @@ const sections = [
   {
     key: "tracking",
     title: "Tracking",
-    subtitle: "Photos, forms & reports",
+    subtitle: "Forms & reports",
     icon: "📊",
     links: [
-      { href: "/app/progress-photos", label: "Progress Photos", desc: "Track progress" },
       { href: "/app/forms", label: "Forms", desc: "Custom forms" },
       { href: "/app/reports", label: "Reports", desc: "Analytics and progress" },
     ],

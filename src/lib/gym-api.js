@@ -2,7 +2,7 @@
  * Shared config and helpers for gym coach API routes.
  * Database and collection IDs must match Appwrite.
  */
-import { Query } from "appwrite";
+import { Query } from "node-appwrite";
 import { serverDatabases } from "@/lib/appwrite-server";
 
 export const DB_ID = (process.env.APPWRITE_GYM_DATABASE_ID ?? "gym_coach").trim();
@@ -18,6 +18,7 @@ export const COLLECTIONS = {
   "meals-modules": "meals_modules",
   "meal-plans": "meal_plans",
   "meal-logs": "meal_logs",
+  "progress-photos": "progress_photos",
 };
 
 export async function listGymDocuments(collectionKey, options = {}) {

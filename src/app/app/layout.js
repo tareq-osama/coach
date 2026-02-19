@@ -104,7 +104,6 @@ const navSections = [
   {
     title: "Tracking",
     links: [
-      { href: "/app/progress-photos", label: "Progress Photos", icon: icons.camera },
       { href: "/app/forms", label: "Forms", icon: icons.form },
       { href: "/app/reports", label: "Reports", icon: icons.chart },
     ],

@@ -44,6 +44,7 @@ Open [http://localhost:3000](http://localhost:3000). Sign in or register, then u
    - `NEXT_PUBLIC_APPWRITE_PROJECT_ID`
    - `APPWRITE_API_KEY`
    - `APPWRITE_GYM_DATABASE_ID` (optional)
+   - `NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID` (optional; for progress photos)
 
 2. **Allow your Vercel URL in Appwrite**  
    Login runs in the browser and talks to Appwrite directly. If your Vercel URL is not allowed, you get “failed to fetch” or CORS errors.

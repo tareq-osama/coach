@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Query, ID } from "appwrite";
+import { Query, ID } from "node-appwrite";
 import { serverDatabases } from "@/lib/appwrite-server";
 
 const DB_ID = (process.env.APPWRITE_GYM_DATABASE_ID ?? "gym_coach").trim();

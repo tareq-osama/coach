@@ -150,8 +150,30 @@ export default function MembersPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    fetch("/api/gym/members")
-      .then((res) => res.json())
+    const url = "/api/gym/members";
+    fetch(url)
+      .then(async (res) => {
+        const text = await res.text();
+        if (!res.ok) {
+          try {
+            const data = JSON.parse(text);
+            throw new Error(data.details || data.error || `HTTP ${res.status}`);
+          } catch (e) {
+            if (e instanceof SyntaxError || text.trimStart().startsWith("<")) {
+              throw new Error(`API error (${res.status}). Check that ${url} is available.`);
+            }
+            throw e;
+          }
+        }
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          if (text.trimStart().startsWith("<")) {
+            throw new Error("API returned HTML instead of JSON. Check that the server and /api/gym/members are correct.");
+          }
+          throw new Error("Invalid JSON from API");
+        }
+      })
       .then((data) => {
         if (data.error) throw new Error(data.details || data.error);
         setMembers(data.documents ?? []);
