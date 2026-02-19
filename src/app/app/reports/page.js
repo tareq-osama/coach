@@ -209,7 +209,7 @@ export default function ReportsPage() {
               visibleMonths={2}
             />
           </div>
-          <Button variant="bordered" size="sm" onPress={resetFilters} className="shrink-0 pb-0.5">
+          <Button variant="solid" color="default" size="sm" onPress={resetFilters} className="shrink-0 pb-0.5">
             Reset
           </Button>
         </div>
@@ -408,10 +408,10 @@ export default function ReportsPage() {
       <section className="rounded-lg border border-default-200 p-4">
         <h2 className="mb-2 text-lg font-medium text-foreground">Export Data</h2>
         <div className="flex flex-wrap gap-3">
-          <Button variant="bordered" color="primary" onPress={exportSessionsToCsv}>
+          <Button variant="solid" color="primary" onPress={exportSessionsToCsv}>
             Export Sessions to CSV
           </Button>
-          <Button variant="bordered" color="primary" onPress={exportProgressToCsv}>
+          <Button variant="solid" color="default" onPress={exportProgressToCsv}>
             Export Progress to CSV
           </Button>
         </div>
