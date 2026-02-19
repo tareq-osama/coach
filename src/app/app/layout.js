@@ -172,11 +172,11 @@ export default function AppLayout({ children }) {
       </Button>
 
       <aside
-        className={`gym-sidebar fixed inset-y-0 left-0 z-40 flex w-64 flex-col transform overflow-hidden border-r border-default-200 bg-content2 transition-transform duration-200 lg:translate-x-0 pt-14 lg:pt-4 ${
+        className={`gym-sidebar fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col transform overflow-hidden border-r border-default-200 bg-default-200 dark:bg-default-100 transition-transform duration-200 lg:translate-x-0 pt-14 lg:pt-4 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-1 flex-col min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 p-4">
             <Button
               as={Link}
@@ -191,7 +191,7 @@ export default function AppLayout({ children }) {
           <ScrollShadow
             hideScrollBar
             size={60}
-            className="gym-sidebar-scroll flex-1 overflow-y-auto"
+            className="gym-sidebar-scroll min-h-0 flex-1 overflow-y-auto"
           >
             <nav className="flex flex-col gap-6 px-3 pb-4 pt-1">
               {navSections.map((section) => (
@@ -199,17 +199,17 @@ export default function AppLayout({ children }) {
                   <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold tracking-wider text-default-500">
                     {section.title}
                   </p>
-                  <ul className="space-y-0.5">
+                  <ul className="space-y-1">
                     {section.links.map((item) => (
                       <li key={item.href}>
                         <Button
                           as={Link}
                           href={item.href}
                           variant="light"
-                          className={`gym-sidebar-link h-auto min-h-9 justify-start gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-foreground hover:bg-default-100 ${
-                            pathname === item.href ? "gym-sidebar-link-active bg-primary text-primary-foreground hover:bg-primary-600" : ""
+                          className={`gym-sidebar-link h-auto min-h-8 w-full justify-start gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground/80 hover:bg-default-100 hover:text-foreground ${
+                            pathname === item.href ? "gym-sidebar-link-active bg-primary text-primary-foreground hover:bg-primary-600 hover:text-primary-foreground" : ""
                           }`}
-                          startContent={item.icon}
+                          startContent={<span className="gym-sidebar-icon opacity-50">{item.icon}</span>}
                           onPress={() => setSidebarOpen(false)}
                         >
                           {item.label}
@@ -227,7 +227,7 @@ export default function AppLayout({ children }) {
               <Button
                 variant="light"
                 size="sm"
-                className="gym-sidebar-link h-auto w-full justify-start px-3 py-2 text-left text-sm text-foreground hover:bg-default-100"
+                className="gym-sidebar-link h-auto w-full justify-start px-3 py-1.5 text-left text-sm text-foreground hover:bg-default-100"
                 onPress={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                 startContent={
                   resolvedTheme === "dark" ? (
@@ -245,7 +245,7 @@ export default function AppLayout({ children }) {
             </p>
             <Button
               variant="light"
-              className="gym-sidebar-logout h-auto w-full justify-start gap-2 px-3 py-2.5 text-left text-sm text-foreground hover:bg-default-100"
+              className="gym-sidebar-logout h-auto w-full justify-start gap-2 px-3 py-1.5 text-left text-sm text-foreground hover:bg-default-100"
               startContent={icons.logout}
               onPress={handleLogout}
             >
