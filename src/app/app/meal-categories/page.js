@@ -8,9 +8,6 @@ import {
   Spinner,
   Button,
   Input,
-  Textarea,
-  Select,
-  SelectItem,
   Modal,
   ModalContent,
   ModalHeader,
@@ -18,25 +15,21 @@ import {
   ModalFooter,
   useDisclosure,
   Image,
-  NumberInput,
 } from "@heroui/react";
 import { useGymList } from "../use-gym-list";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
 import { imageUrl } from "@/lib/image-url";
 
-const COLLECTION_KEY = "meals-modules";
+const COLLECTION_KEY = "meal-categories";
 const PLACEHOLDER_IMG = "https://heroui.com/images/hero-card-complete.jpeg";
 
-export default function MealsModulesPage() {
-  const { data: modules, loading, error, refetch } = useGymList(COLLECTION_KEY);
-  const { data: mealPlans } = useGymList("meal-plans");
+export default function MealCategoriesPage() {
+  const { data: categories, loading, error, refetch } = useGymList(COLLECTION_KEY);
   const { user } = useAuth();
-  const planMap = Object.fromEntries((mealPlans ?? []).map((p) => [p.$id, p.name]));
-
   const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const [form, setForm] = useState({ name: "", description: "", meal_plan_id: "", sort_order: 0, thumbnail: "" });
+  const [form, setForm] = useState({ name: "", thumbnail: "" });
   const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -45,20 +38,14 @@ export default function MealsModulesPage() {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ name: "", description: "", meal_plan_id: "", sort_order: 0, thumbnail: "" });
+    setForm({ name: "", thumbnail: "" });
     setFormError(null);
     onFormOpen();
   }
 
   function openEdit(item) {
     setEditingId(item.$id);
-    setForm({
-      name: item.name ?? "",
-      description: item.description ?? "",
-      meal_plan_id: item.meal_plan_id ?? "",
-      sort_order: typeof item.sort_order === "number" ? item.sort_order : 0,
-      thumbnail: item.thumbnail ?? "",
-    });
+    setForm({ name: item.name ?? "", thumbnail: item.thumbnail ?? "" });
     setFormError(null);
     onFormOpen();
   }
@@ -82,13 +69,7 @@ export default function MealsModulesPage() {
         ? `/api/gym/${COLLECTION_KEY}/${editingId}`
         : `/api/gym/${COLLECTION_KEY}`;
       const method = editingId ? "PATCH" : "POST";
-      const body = {
-        name: form.name.trim(),
-        description: form.description?.trim() ?? "",
-        meal_plan_id: form.meal_plan_id || undefined,
-        sort_order: typeof form.sort_order === "number" ? form.sort_order : 0,
-        thumbnail: form.thumbnail?.trim() ?? "",
-      };
+      const body = editingId ? { name: form.name.trim(), thumbnail: form.thumbnail.trim() } : form;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
@@ -132,7 +113,7 @@ export default function MealsModulesPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Spinner size="lg" color="primary" />
-        <p className="text-default-500">Loading meals modules…</p>
+        <p className="text-default-500">Loading meal categories…</p>
       </div>
     );
   }
@@ -141,7 +122,7 @@ export default function MealsModulesPage() {
     return (
       <Card className="border-danger-200 bg-danger-50/20">
         <CardBody>
-          <p className="font-medium text-danger-700">Error loading meals modules</p>
+          <p className="font-medium text-danger-700">Error loading meal categories</p>
           <p className="mt-1 text-sm text-danger-600">{error}</p>
         </CardBody>
       </Card>
@@ -152,52 +133,43 @@ export default function MealsModulesPage() {
     <div>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Meals Modules</h1>
-          <p className="mt-2 text-default-500">Sections within a meal plan (e.g. Week 1, Day types).</p>
+          <h1 className="text-2xl font-semibold text-foreground">Meal Categories</h1>
+          <p className="mt-2 text-default-500">e.g. Breakfast, Lunch, Dinner, Pre-workout, Post-workout, Supplements.</p>
         </div>
         <Button color="primary" onPress={openCreate}>
-          Add module
+          Add category
         </Button>
       </div>
 
       <Card className="mt-6">
-        {modules.length === 0 ? (
+        {categories.length === 0 ? (
           <CardBody className="py-12 text-center text-default-500">
-            No meals modules yet. Add one to get started.
+            No meal categories yet. Add one to get started.
           </CardBody>
         ) : (
           <ul className="divide-y divide-default-200">
-            {modules.map((m) => (
-              <li key={m.$id} className="flex items-center gap-4 px-4 py-3 sm:px-6">
+            {categories.map((c) => (
+              <li key={c.$id} className="flex items-center gap-4 px-4 py-3 sm:px-6">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-default-100">
                   <Image
                     alt=""
                     classNames={{ wrapper: "h-full w-full" }}
                     className="h-full w-full object-cover"
-                    src={imageUrl(m.thumbnail) || PLACEHOLDER_IMG}
+                    src={imageUrl(c.thumbnail) || PLACEHOLDER_IMG}
                     width={40}
                     height={40}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/app/meals-modules/${m.$id}`} className="font-medium text-foreground hover:underline">
-                    {m.name}
+                  <Link href={`/app/meal-categories/${c.$id}`} className="font-medium text-foreground hover:underline">
+                    {c.name}
                   </Link>
-                  {m.description && (
-                    <p className="mt-0.5 line-clamp-1 text-sm text-default-500">{m.description}</p>
-                  )}
-                  {m.meal_plan_id && (
-                    <p className="mt-1 text-xs text-default-400">
-                      Plan: {planMap[m.meal_plan_id] ?? m.meal_plan_id}
-                      {typeof m.sort_order === "number" && ` · Order: ${m.sort_order}`}
-                    </p>
-                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <Button as={Link} href={`/app/meals-modules/${m.$id}`} size="sm" variant="flat">
+                  <Button as={Link} href={`/app/meal-categories/${c.$id}`} size="sm" variant="flat">
                     View / Edit
                   </Button>
-                  <Button size="sm" color="danger" variant="flat" onPress={() => openDelete(m)}>
+                  <Button size="sm" color="danger" variant="flat" onPress={() => openDelete(c)}>
                     Delete
                   </Button>
                 </div>
@@ -210,7 +182,7 @@ export default function MealsModulesPage() {
       <Modal isOpen={isFormOpen} onClose={onFormClose}>
         <ModalContent>
           <form onSubmit={handleSubmit}>
-            <ModalHeader>{editingId ? "Edit meal module" : "Add meal module"}</ModalHeader>
+            <ModalHeader>{editingId ? "Edit meal category" : "Add meal category"}</ModalHeader>
             <ModalBody className="gap-4">
               {formError && (
                 <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
@@ -221,41 +193,15 @@ export default function MealsModulesPage() {
                 label="Name"
                 value={form.name}
                 onValueChange={(v) => setForm((f) => ({ ...f, name: v }))}
-                placeholder="e.g. Week 1"
+                placeholder="e.g. Breakfast"
                 isRequired
-              />
-              <Textarea
-                label="Description"
-                value={form.description}
-                onValueChange={(v) => setForm((f) => ({ ...f, description: v }))}
-                placeholder="Optional"
-              />
-              <Select
-                label="Meal plan"
-                placeholder="Select plan"
-                selectedKeys={form.meal_plan_id ? [form.meal_plan_id] : []}
-                onSelectionChange={(keys) => {
-                  const v = Array.from(keys)[0] ?? "";
-                  setForm((f) => ({ ...f, meal_plan_id: v }));
-                }}
-              >
-                {(mealPlans ?? []).map((p) => (
-                  <SelectItem key={p.$id} textValue={p.name}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </Select>
-              <NumberInput
-                label="Sort order"
-                value={form.sort_order}
-                onValueChange={(v) => setForm((f) => ({ ...f, sort_order: v ?? 0 }))}
-                minValue={0}
               />
               <Input
                 label="Thumbnail URL"
                 value={form.thumbnail}
                 onValueChange={(v) => setForm((f) => ({ ...f, thumbnail: v }))}
                 placeholder="https://…"
+                description="Image URL. Optional."
               />
             </ModalBody>
             <ModalFooter>
@@ -272,7 +218,7 @@ export default function MealsModulesPage() {
 
       <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
         <ModalContent>
-          <ModalHeader>Delete meal module</ModalHeader>
+          <ModalHeader>Delete meal category</ModalHeader>
           <ModalBody>
             {deleteError && (
               <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">

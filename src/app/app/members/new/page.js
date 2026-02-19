@@ -4,9 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardBody, CardHeader, Button, Input, Textarea } from "@heroui/react";
+import { useAuth } from "@/app/auth-context";
+import { gymApiHeaders } from "@/lib/gym-client";
 
 export default function NewMemberPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
@@ -14,11 +17,15 @@ export default function NewMemberPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    if (!user?.$id) {
+      setError("You must be signed in to add a member.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/gym/members", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
         body: JSON.stringify(form),
       });
       const data = await res.json();

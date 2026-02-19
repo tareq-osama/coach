@@ -96,6 +96,7 @@ const navSections = [
     title: "Nutrition",
     links: [
       { href: "/app/meals", label: "Meals", icon: icons.apple },
+      { href: "/app/meal-categories", label: "Meal Categories", icon: icons.body },
       { href: "/app/meals-modules", label: "Meals Modules", icon: icons.layers },
       { href: "/app/meal-plans", label: "Meal Plans", icon: icons.clipboard },
       { href: "/app/meal-logs", label: "Meal Logs", icon: icons.document },

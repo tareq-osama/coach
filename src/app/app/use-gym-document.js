@@ -5,30 +5,24 @@ import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
 
 /**
- * Fetches a list from /api/gym/[collection]. Returns { data, loading, error, refetch }.
- * Sends X-User-Id when user is logged in so owner-scoped collections are filtered.
- * @param {string} collectionKey
- * @param {{ queryParams?: Record<string, string> }} options - optional queryParams appended to URL (e.g. { workout_plan_id: id })
+ * Fetches a single document from /api/gym/[collection]/[id].
+ * Returns { data, loading, error, refetch }.
  */
-export function useGymList(collectionKey, options = {}) {
-  const { queryParams } = options;
+export function useGymDocument(collectionKey, id) {
   const { user } = useAuth();
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const refetch = useCallback(() => {
-    if (!collectionKey) return;
+    if (!collectionKey || !id) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
-    let url = `/api/gym/${collectionKey}`;
-    if (queryParams && typeof queryParams === "object" && Object.keys(queryParams).length) {
-      const sp = new URLSearchParams();
-      for (const [k, v] of Object.entries(queryParams)) {
-        if (v != null && v !== "") sp.set(k, String(v));
-      }
-      if (sp.toString()) url += `?${sp.toString()}`;
-    }
+    const url = `/api/gym/${collectionKey}/${id}`;
     fetch(url, { headers: gymApiHeaders(user) })
       .then(async (res) => {
         const text = await res.text();
@@ -38,7 +32,7 @@ export function useGymList(collectionKey, options = {}) {
             throw new Error(json.details || json.error || `HTTP ${res.status}`);
           } catch (e) {
             if (e instanceof SyntaxError || text.trimStart().startsWith("<")) {
-              throw new Error(`API error: server returned ${res.status}. Check that ${url} is available.`);
+              throw new Error(`API error: server returned ${res.status}.`);
             }
             throw e;
           }
@@ -46,19 +40,17 @@ export function useGymList(collectionKey, options = {}) {
         try {
           return JSON.parse(text);
         } catch (e) {
-          if (text.trimStart().startsWith("<")) {
-            throw new Error(`API returned HTML instead of JSON. Check that ${url} is available.`);
-          }
+          if (text.trimStart().startsWith("<")) throw new Error("Invalid response from API");
           throw new Error("Invalid JSON from API");
         }
       })
       .then((json) => {
         if (json.error) throw new Error(json.details || json.error);
-        setData(json.documents ?? []);
+        setData(json);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [collectionKey, user?.$id, JSON.stringify(queryParams ?? {})]);
+  }, [collectionKey, id, user?.$id]);
 
   useEffect(() => {
     refetch();

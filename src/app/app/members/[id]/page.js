@@ -1,30 +1,244 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardBody, Button, Spinner } from "@heroui/react";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Button,
+  Input,
+  Textarea,
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Accordion,
+  AccordionItem,
+  Select,
+  SelectItem,
+  NumberInput,
+} from "@heroui/react";
+import { useAuth } from "@/app/auth-context";
+import { gymApiHeaders } from "@/lib/gym-client";
+import ThumbnailUpload from "../../components/ThumbnailUpload";
 import ProgressPhotosSection from "./ProgressPhotosSection";
+import MemberReportsSection from "./MemberReportsSection";
+import MemberPageHeader from "./MemberPageHeader";
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "pending", label: "Pending" },
+];
 
 export default function MemberDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
   const [member, setMember] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+    thumbnail: "",
+    join_date: "",
+    status: "",
+    goals: "",
+    weight_kg: "",
+    height_cm: "",
+    chest_cm: "",
+    waist_cm: "",
+    hips_cm: "",
+    arms_cm: "",
+    thighs_cm: "",
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [deleteError, setDeleteError] = useState(null);
+  const [workoutPlanIds, setWorkoutPlanIds] = useState(new Set());
+  const [mealPlanIds, setMealPlanIds] = useState(new Set());
+  const [savingPlans, setSavingPlans] = useState(false);
+  const [plansError, setPlansError] = useState(null);
+
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!params.id) return;
-    fetch(`/api/gym/members/${params.id}`)
+    fetch(`/api/gym/members/${params.id}`, { headers: gymApiHeaders(user) })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.details || data.error);
         setMember(data);
+        const joinDate = data.join_date
+          ? new Date(data.join_date).toISOString().slice(0, 10)
+          : "";
+        setForm({
+          name: data.name ?? "",
+          email: data.email ?? "",
+          phone: data.phone ?? "",
+          notes: data.notes ?? "",
+          thumbnail: data.thumbnail ?? "",
+          join_date: joinDate,
+          status: data.status ?? "",
+          goals: data.goals ?? "",
+          weight_kg: data.weight_kg != null ? String(data.weight_kg) : "",
+          height_cm: data.height_cm != null ? String(data.height_cm) : "",
+          chest_cm: data.chest_cm != null ? String(data.chest_cm) : "",
+          waist_cm: data.waist_cm != null ? String(data.waist_cm) : "",
+          hips_cm: data.hips_cm != null ? String(data.hips_cm) : "",
+          arms_cm: data.arms_cm != null ? String(data.arms_cm) : "",
+          thighs_cm: data.thighs_cm != null ? String(data.thighs_cm) : "",
+        });
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [params.id, user?.$id]);
 
-  if (loading) {
+  useEffect(() => {
+    const headers = gymApiHeaders(user);
+    Promise.all([
+      fetch("/api/gym/workout-plans", { headers }).then((r) => r.json()),
+      fetch("/api/gym/meal-plans", { headers }).then((r) => r.json()),
+    ]).then(([wpRes, mpRes]) => {
+      if (wpRes.documents) setWorkoutPlans(wpRes.documents);
+      if (mpRes.documents) setMealPlans(mpRes.documents);
+    });
+  }, [user?.$id]);
+
+  useEffect(() => {
+    if (!member) return;
+    const wpIds = new Set(
+      (workoutPlans ?? []).filter((p) => p.member_id === member.$id).map((p) => p.$id)
+    );
+    const mpIds = new Set(
+      (mealPlans ?? []).filter((p) => p.member_id === member.$id).map((p) => p.$id)
+    );
+    setWorkoutPlanIds(wpIds);
+    setMealPlanIds(mpIds);
+  }, [member?.$id, workoutPlans, mealPlans]);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaveError(null);
+    if (!user?.$id) {
+      setSaveError("You must be signed in to save.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const joinDateIso =
+        form.join_date && form.join_date.length >= 10
+          ? new Date(form.join_date).toISOString()
+          : undefined;
+      const payload = {
+        name: form.name.trim(),
+        email: form.email?.trim() ?? "",
+        phone: form.phone?.trim() ?? "",
+        notes: form.notes?.trim() ?? "",
+        thumbnail: form.thumbnail?.trim() ?? "",
+        join_date: joinDateIso,
+        status: form.status || undefined,
+        goals: form.goals?.trim() ?? "",
+        weight_kg: form.weight_kg === "" ? undefined : Number(form.weight_kg),
+        height_cm: form.height_cm === "" ? undefined : Number(form.height_cm),
+        chest_cm: form.chest_cm === "" ? undefined : Number(form.chest_cm),
+        waist_cm: form.waist_cm === "" ? undefined : Number(form.waist_cm),
+        hips_cm: form.hips_cm === "" ? undefined : Number(form.hips_cm),
+        arms_cm: form.arms_cm === "" ? undefined : Number(form.arms_cm),
+        thighs_cm: form.thighs_cm === "" ? undefined : Number(form.thighs_cm),
+      };
+      const res = await fetch(`/api/gym/members/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error);
+      setMember((prev) => (prev ? { ...prev, ...data } : data));
+    } catch (err) {
+      setSaveError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function savePlanAssignments() {
+    setPlansError(null);
+    setSavingPlans(true);
+    const headers = { "Content-Type": "application/json", ...gymApiHeaders(user) };
+    try {
+      for (const plan of workoutPlans) {
+        const shouldAssign = workoutPlanIds.has(plan.$id);
+        const currentlyAssigned = plan.member_id === member?.$id;
+        if (shouldAssign !== currentlyAssigned) {
+          await fetch(`/api/gym/workout-plans/${plan.$id}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({
+              member_id: shouldAssign ? member.$id : null,
+            }),
+          });
+        }
+      }
+      for (const plan of mealPlans) {
+        const shouldAssign = mealPlanIds.has(plan.$id);
+        const currentlyAssigned = plan.member_id === member?.$id;
+        if (shouldAssign !== currentlyAssigned) {
+          await fetch(`/api/gym/meal-plans/${plan.$id}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({
+              member_id: shouldAssign ? member.$id : null,
+            }),
+          });
+        }
+      }
+      const [wpRes, mpRes] = await Promise.all([
+        fetch("/api/gym/workout-plans", { headers: gymApiHeaders(user) }).then((r) => r.json()),
+        fetch("/api/gym/meal-plans", { headers: gymApiHeaders(user) }).then((r) => r.json()),
+      ]);
+      if (wpRes.documents) setWorkoutPlans(wpRes.documents);
+      if (mpRes.documents) setMealPlans(mpRes.documents);
+    } catch (err) {
+      setPlansError(err.message);
+    } finally {
+      setSavingPlans(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/gym/members/${params.id}`, {
+        method: "DELETE",
+        headers: gymApiHeaders(user),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.details || data.error || "Delete failed");
+      }
+      router.push("/app/members");
+      router.refresh();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading && !member) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Spinner size="lg" color="primary" />
@@ -49,37 +263,258 @@ export default function MemberDetailPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-4">
-        <Button as={Link} href="/app/members" variant="light" size="sm">
-          ← Members
-        </Button>
-        <h1 className="text-2xl font-semibold text-foreground">{member.name || "Unnamed"}</h1>
-      </div>
-      <Card>
-        <CardBody className="gap-4">
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-default-500">Email</dt>
-              <dd className="mt-1 text-foreground">{member.email || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-default-500">Phone</dt>
-              <dd className="mt-1 text-foreground">{member.phone || "—"}</dd>
-            </div>
-            {member.notes && (
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-default-500">Notes</dt>
-                <dd className="mt-1 whitespace-pre-wrap text-foreground">{member.notes}</dd>
-              </div>
-            )}
-          </dl>
-        </CardBody>
-      </Card>
+    <div className="space-y-6">
+      <MemberPageHeader
+        avatarSrc={member.thumbnail}
+        name={member.name}
+        email={member.email}
+        memberId={member.$id}
+        breadcrumbs={["Members", member.name || "Member"]}
+        primaryLabel="Save"
+        secondaryLabel="Delete member"
+        tertiaryLabel="Back"
+        tertiaryHref="/app/members"
+        onPrimary={() => handleSave({ preventDefault: () => {} })}
+        onSecondary={onDeleteOpen}
+        onSearch={(value) => setSearchQuery(value)}
+        isPrimaryLoading={saving}
+        showSearch={false}
+      />
 
-      <div className="mt-6">
-        <ProgressPhotosSection memberId={member.$id} />
-      </div>
+      <Accordion selectionMode="multiple" defaultExpandedKeys={["details", "measurements", "plans", "photos", "reports"]}>
+        <AccordionItem key="details" aria-label="Member details" title="Member details">
+          <Card shadow="sm" className="border-none">
+            <CardBody className="gap-4">
+              <form onSubmit={handleSave} className="flex flex-col gap-4">
+                {saveError && (
+                  <p className="rounded-lg bg-danger-50 p-3 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
+                    {saveError}
+                  </p>
+                )}
+                <div className="grid gap-6 sm:grid-cols-2">
+                <div className="flex flex-col gap-4">
+                  <ThumbnailUpload
+                    value={form.thumbnail}
+                    onValueChange={(url) => setForm((f) => ({ ...f, thumbnail: url }))}
+                    label="Profile photo"
+                    prefix="members"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col gap-4">
+                  <Input
+                    label="Name"
+                    value={form.name}
+                    onValueChange={(v) => setForm((f) => ({ ...f, name: v }))}
+                    placeholder="Client name"
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={form.email}
+                    onValueChange={(v) => setForm((f) => ({ ...f, email: v }))}
+                    placeholder="email@example.com"
+                  />
+                  <Input
+                    label="Phone"
+                    value={form.phone}
+                    onValueChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                    placeholder="+1234567890"
+                  />
+                  <Input
+                    label="Join date"
+                    type="date"
+                    value={form.join_date}
+                    onValueChange={(v) => setForm((f) => ({ ...f, join_date: v }))}
+                    size="md"
+                  />
+                  <Select
+                    label="Status"
+                    placeholder="Select status"
+                    selectedKeys={form.status ? [form.status] : []}
+                    onSelectionChange={(keys) => {
+                      const v = Array.from(keys)[0] ?? "";
+                      setForm((f) => ({ ...f, status: v }));
+                    }}
+                  >
+                    {STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </Select>
+                  <Textarea
+                    label="Goals"
+                    value={form.goals}
+                    onValueChange={(v) => setForm((f) => ({ ...f, goals: v }))}
+                    placeholder="Member fitness goals and objectives"
+                    minRows={3}
+                  />
+                  <Textarea
+                    label="Notes"
+                    value={form.notes}
+                    onValueChange={(v) => setForm((f) => ({ ...f, notes: v }))}
+                    placeholder="Additional notes"
+                  />
+                </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" color="primary" isLoading={saving}>
+                    Save details
+                  </Button>
+                  <Button as={Link} href="/app/members" variant="flat">
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardBody>
+          </Card>
+        </AccordionItem>
+
+        <AccordionItem key="measurements" aria-label="Body measurements" title="Body measurements">
+          <Card shadow="sm" className="border-none">
+            <CardBody className="gap-4">
+              <p className="text-sm text-default-500">
+                Record weight and body measurements for this member.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <NumberInput
+                  label="Weight (kg)"
+                  value={form.weight_kg}
+                  onValueChange={(v) => setForm((f) => ({ ...f, weight_kg: v }))}
+                  minValue={0}
+                  step={0.1}
+                />
+                <NumberInput
+                  label="Height (cm)"
+                  value={form.height_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, height_cm: v }))}
+                  minValue={0}
+                />
+                <NumberInput
+                  label="Chest (cm)"
+                  value={form.chest_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, chest_cm: v }))}
+                  minValue={0}
+                />
+                <NumberInput
+                  label="Waist (cm)"
+                  value={form.waist_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, waist_cm: v }))}
+                  minValue={0}
+                />
+                <NumberInput
+                  label="Hips (cm)"
+                  value={form.hips_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, hips_cm: v }))}
+                  minValue={0}
+                />
+                <NumberInput
+                  label="Arms (cm)"
+                  value={form.arms_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, arms_cm: v }))}
+                  minValue={0}
+                />
+                <NumberInput
+                  label="Thighs (cm)"
+                  value={form.thighs_cm}
+                  onValueChange={(v) => setForm((f) => ({ ...f, thighs_cm: v }))}
+                  minValue={0}
+                />
+              </div>
+              <Button
+                color="primary"
+                variant="flat"
+                onPress={(e) => handleSave({ preventDefault: () => {} })}
+                isLoading={saving}
+              >
+                Save measurements
+              </Button>
+            </CardBody>
+          </Card>
+        </AccordionItem>
+
+        <AccordionItem key="plans" aria-label="Assigned plans" title="Assigned workout & meal plans">
+          <Card shadow="sm" className="border-none">
+            <CardBody className="gap-4">
+              {plansError && (
+                <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
+                  {plansError}
+                </p>
+              )}
+              <Select
+                label="Workout plans"
+                placeholder="Select one or many"
+                selectionMode="multiple"
+                selectedKeys={workoutPlanIds}
+                onSelectionChange={(keys) => setWorkoutPlanIds(new Set(keys))}
+                description="Assign workout plans to this member. They will see these in their portal."
+              >
+                {(workoutPlans ?? []).map((p) => (
+                  <SelectItem key={p.$id} textValue={p.name}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </Select>
+              <Select
+                label="Meal plans"
+                placeholder="Select one or many"
+                selectionMode="multiple"
+                selectedKeys={mealPlanIds}
+                onSelectionChange={(keys) => setMealPlanIds(new Set(keys))}
+                description="Assign meal plans to this member. They will see these in their portal."
+              >
+                {(mealPlans ?? []).map((p) => (
+                  <SelectItem key={p.$id} textValue={p.name}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </Select>
+              <Button
+                color="primary"
+                variant="flat"
+                onPress={savePlanAssignments}
+                isLoading={savingPlans}
+              >
+                Save plan assignments
+              </Button>
+            </CardBody>
+          </Card>
+        </AccordionItem>
+
+        <AccordionItem key="photos" aria-label="Progress photos" title="Progress photos">
+          <ProgressPhotosSection memberId={member.$id} />
+        </AccordionItem>
+
+        <AccordionItem key="reports" aria-label="Reports" title="Reports & analytics">
+          <Card shadow="sm" className="border-none">
+            <CardBody>
+              <MemberReportsSection memberId={member.$id} memberName={member.name} />
+            </CardBody>
+          </Card>
+        </AccordionItem>
+      </Accordion>
+
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
+        <ModalContent>
+          <ModalHeader>Delete member</ModalHeader>
+          <ModalBody>
+            {deleteError && (
+              <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
+                {deleteError}
+              </p>
+            )}
+            <p>
+              Delete <strong>{member.name || "this member"}</strong>? This cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onDeleteClose}>
+              Cancel
+            </Button>
+            <Button color="danger" onPress={handleDelete} isLoading={saving}>
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

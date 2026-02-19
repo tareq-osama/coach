@@ -2,6 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/app/auth-context";
+import { gymApiHeaders } from "@/lib/gym-client";
+import { imageUrl } from "@/lib/image-url";
 import {
   Table,
   TableHeader,
@@ -19,7 +22,29 @@ import {
   Spinner,
   User,
   Chip,
+  Tabs,
+  Tab,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Image,
+  Checkbox,
 } from "@heroui/react";
+
+const ListIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+
+const GridIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+  </svg>
+);
+
+const MEMBER_PLACEHOLDER_IMG = "https://i.pravatar.cc/300?u=";
 
 const columns = [
   { name: "NAME", uid: "name", sortable: true },
@@ -148,10 +173,11 @@ export default function MembersPage() {
     direction: "ascending",
   });
   const [page, setPage] = useState(1);
+  const { user } = useAuth();
 
   useEffect(() => {
     const url = "/api/gym/members";
-    fetch(url)
+    fetch(url, { headers: gymApiHeaders(user) })
       .then(async (res) => {
         const text = await res.text();
         if (!res.ok) {
@@ -180,7 +206,7 @@ export default function MembersPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.$id]);
 
   const pages = Math.ceil(members.length / rowsPerPage) || 1;
   const hasSearchFilter = Boolean(filterValue);
@@ -220,72 +246,6 @@ export default function MembersPage() {
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
     });
   }, [sortDescriptor, items]);
-
-  const renderCell = useCallback((member, columnKey) => {
-    const cellValue = member[columnKey];
-    const status = member.status ?? "active";
-    switch (columnKey) {
-      case "name":
-        return (
-          <User
-            avatarProps={{
-              radius: "full",
-              size: "sm",
-              src: member.avatar ?? `https://i.pravatar.cc/150?u=${member.$id}`,
-            }}
-            classNames={{ description: "text-default-500" }}
-            description={member.email ?? ""}
-            name={member.name ?? "—"}
-          />
-        );
-      case "status":
-        return (
-          <Chip
-            className="capitalize border-none gap-1 text-default-600"
-            color={statusColorMap[status] ?? "default"}
-            size="sm"
-            variant="dot"
-          >
-            {status}
-          </Chip>
-        );
-      case "phone":
-        return <span className="text-default-600">{member.phone ?? "—"}</span>;
-      case "actions":
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              as={Link}
-              href={`/app/members/${member.$id}`}
-              size="sm"
-              variant="flat"
-            >
-              View
-            </Button>
-            <Dropdown>
-              <DropdownTrigger>
-                <Button isIconOnly radius="full" size="sm" variant="light">
-                  <VerticalDotsIcon className="text-default-400" />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu aria-label="Member actions">
-                <DropdownItem key="view" as={Link} href={`/app/members/${member.$id}`}>
-                  View
-                </DropdownItem>
-                <DropdownItem key="edit" as={Link} href={`/app/members/${member.$id}`}>
-                  Edit
-                </DropdownItem>
-                <DropdownItem key="delete" color="danger">
-                  Delete
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        );
-      default:
-        return cellValue ?? "—";
-    }
-  }, []);
 
   const onRowsPerPageChange = useCallback((e) => {
     setRowsPerPage(Number(e.target.value));
@@ -418,18 +378,55 @@ export default function MembersPage() {
     [selectedKeys, items.length, page, pages, hasSearchFilter]
   );
 
-  const classNames = useMemo(
-    () => ({
-      th: ["bg-transparent", "text-default-500", "border-b", "border-divider"],
-      td: [
-        "first:group-data-[first=true]/tr:before:rounded-none",
-        "last:group-data-[first=true]/tr:before:rounded-none",
-        "group-data-[middle=true]/tr:before:rounded-none",
-        "first:group-data-[last=true]/tr:before:rounded-none",
-        "last:group-data-[last=true]/tr:before:rounded-none",
-      ],
-    }),
-    []
+  const isAllListSelected =
+    sortedItems.length > 0 &&
+    sortedItems.every((m) => selectedKeys === "all" || (typeof selectedKeys !== "string" && selectedKeys.has(m.$id)));
+
+  const toggleSelectAllList = useCallback(() => {
+    if (isAllListSelected) {
+      setSelectedKeys(new Set());
+    } else {
+      setSelectedKeys(new Set(sortedItems.map((m) => m.$id)));
+    }
+  }, [isAllListSelected, sortedItems]);
+
+  const toggleSelectRow = useCallback(
+    (memberId) => {
+      setSelectedKeys((prev) => {
+        const next = prev === "all" ? new Set(sortedItems.map((m) => m.$id)) : new Set(prev);
+        if (next.has(memberId)) {
+          next.delete(memberId);
+          return next;
+        }
+        next.add(memberId);
+        return next;
+      });
+    },
+    [sortedItems]
+  );
+
+  const isRowSelected = (memberId) => selectedKeys === "all" || (typeof selectedKeys === "object" && selectedKeys.has(memberId));
+
+  const viewTabs = [
+    { id: "list", label: "List", title: "List" },
+    { id: "grid", label: "Grid", title: "Grid" },
+  ];
+
+  const handleSort = useCallback(
+    (columnUid) => {
+      const direction =
+        sortDescriptor.column === columnUid && sortDescriptor.direction === "ascending" ? "descending" : "ascending";
+      setSortDescriptor({ column: columnUid, direction });
+    },
+    [sortDescriptor]
+  );
+
+  const SortIcon = useCallback(
+    ({ column }) =>
+      sortDescriptor.column === column ? (
+        <span className="ml-0.5">{sortDescriptor.direction === "ascending" ? " ↑" : " ↓"}</span>
+      ) : null,
+    [sortDescriptor]
   );
 
   if (loading) {
@@ -455,44 +452,153 @@ export default function MembersPage() {
       <h1 className="text-2xl font-semibold text-foreground">Members</h1>
       <p className="mt-2 text-default-500">Manage client profiles.</p>
 
-      <div className="mt-6">
-        <Table
-          isCompact
-          removeWrapper
-          aria-label="Members table with search, pagination and sorting"
-          bottomContent={bottomContent}
-          bottomContentPlacement="outside"
-          checkboxesProps={{
-            classNames: { wrapper: "after:bg-foreground after:text-background text-background" },
-          }}
-          classNames={classNames}
-          selectedKeys={selectedKeys}
-          selectionMode="multiple"
-          sortDescriptor={sortDescriptor}
-          topContent={topContent}
-          topContentPlacement="outside"
-          onSelectionChange={setSelectedKeys}
-          onSortChange={setSortDescriptor}
-        >
-          <TableHeader columns={headerColumns}>
-            {(column) => (
-              <TableColumn
-                key={column.uid}
-                align={column.uid === "actions" ? "center" : "start"}
-                allowsSorting={column.sortable}
-              >
-                {column.name}
-              </TableColumn>
-            )}
-          </TableHeader>
-          <TableBody emptyContent="No members found" items={sortedItems}>
-            {(item) => (
-              <TableRow key={item.$id}>
-                {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <div className="mt-6 flex w-full flex-col">
+        {topContent}
+        <Tabs aria-label="View mode" className="mt-4" items={viewTabs}>
+          {(tab) => (
+            <Tab
+              key={tab.id}
+              title={
+                <span className="flex items-center gap-2">
+                  {tab.id === "list" ? <ListIcon /> : <GridIcon />}
+                  {tab.label}
+                </span>
+              }
+            >
+              <div className="mt-4">
+                {tab.id === "list" ? (
+                  sortedItems.length === 0 ? (
+                    <p className="py-12 text-center text-default-500">No members found.</p>
+                  ) : (
+                    <div className="rounded-lg border border-default-200">
+                      <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3 sm:px-6">
+                        <Checkbox
+                          isSelected={isAllListSelected}
+                          onValueChange={toggleSelectAllList}
+                          aria-label="Select all"
+                        />
+                        <button
+                          type="button"
+                          className="text-small font-medium text-default-500 cursor-pointer select-none hover:text-foreground text-left"
+                          onClick={() => handleSort("name")}
+                        >
+                          NAME
+                          <SortIcon column="name" />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-small font-medium text-default-500 cursor-pointer select-none hover:text-foreground text-left"
+                          onClick={() => handleSort("status")}
+                        >
+                          STATUS
+                          <SortIcon column="status" />
+                        </button>
+                        <span className="text-small font-medium text-default-500">PHONE</span>
+                        <span className="text-small font-medium text-default-500 text-center">ACTIONS</span>
+                      </div>
+                      <ul className="divide-y divide-default-200">
+                        {sortedItems.map((member) => (
+                          <li
+                            key={member.$id}
+                            className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 px-4 py-3 sm:px-6"
+                          >
+                            <Checkbox
+                              isSelected={isRowSelected(member.$id)}
+                              onValueChange={() => toggleSelectRow(member.$id)}
+                              aria-label={`Select ${member.name ?? member.$id}`}
+                            />
+                            <div className="flex min-w-0 flex-1 items-center gap-4">
+                              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-default-100">
+                                <Image
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                  src={imageUrl(member.thumbnail) || `${MEMBER_PLACEHOLDER_IMG}${member.$id}`}
+                                  width={40}
+                                  height={40}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <Link
+                                  href={`/app/members/${member.$id}`}
+                                  className="font-medium text-foreground hover:underline"
+                                >
+                                  {member.name ?? "—"}
+                                </Link>
+                                {member.email && (
+                                  <p className="mt-0.5 text-sm text-default-500 truncate">{member.email}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <Chip
+                                className="capitalize border-none gap-1 text-default-600"
+                                color={statusColorMap[member.status ?? "active"] ?? "default"}
+                                size="sm"
+                                variant="dot"
+                              >
+                                {member.status ?? "active"}
+                              </Chip>
+                            </div>
+                            <span className="text-sm text-default-600">{member.phone ?? "—"}</span>
+                            <div className="flex items-center gap-2">
+                              <Button as={Link} href={`/app/members/${member.$id}`} size="sm" variant="flat">
+                                View
+                              </Button>
+                              <Dropdown>
+                                <DropdownTrigger>
+                                  <Button isIconOnly radius="full" size="sm" variant="light">
+                                    <VerticalDotsIcon className="text-default-400" />
+                                  </Button>
+                                </DropdownTrigger>
+                                <DropdownMenu aria-label="Member actions">
+                                  <DropdownItem key="view" as={Link} href={`/app/members/${member.$id}`}>
+                                    View
+                                  </DropdownItem>
+                                  <DropdownItem key="edit" as={Link} href={`/app/members/${member.$id}`}>
+                                    Edit
+                                  </DropdownItem>
+                                  <DropdownItem key="delete" color="danger">
+                                    Delete
+                                  </DropdownItem>
+                                </DropdownMenu>
+                              </Dropdown>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                ) : sortedItems.length === 0 ? (
+                  <p className="py-12 text-center text-default-500">No members found.</p>
+                ) : (
+                  <div className="gap-2 grid grid-cols-2 sm:grid-cols-4">
+                    {sortedItems.map((member) => (
+                      <Link key={member.$id} href={`/app/members/${member.$id}`} className="block">
+                        <Card isPressable shadow="sm" className="border-none">
+                          <CardBody className="overflow-visible p-0">
+                            <Image
+                              alt={member.name ?? "Member"}
+                              className="w-full object-cover h-[140px]"
+                              radius="lg"
+                              shadow="sm"
+                              src={imageUrl(member.thumbnail) || `${MEMBER_PLACEHOLDER_IMG}${member.$id}`}
+                              width="100%"
+                            />
+                          </CardBody>
+                          <CardFooter className="text-small justify-between">
+                            <b className="truncate">{member.name ?? "—"}</b>
+                            <p className="text-default-500 truncate max-w-[120px] capitalize">{member.status ?? "—"}</p>
+                          </CardFooter>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Tab>
+          )}
+        </Tabs>
+        {bottomContent}
       </div>
     </div>
   );

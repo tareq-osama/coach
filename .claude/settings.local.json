@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(uvx:*)",
+      "Bash(taskkill:*)"
     ]
+  },
+  "mcpServers": {
+    "appwrite-api": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-appwrite",
+        "--databases",
+        "--functions"
+      ],
+      "env": {
+        "APPWRITE_API_KEY": "standard_f61a1b171c8113e68233918268988435b9c247ed17f04b9196c32838fc104f02f0f70285f30b3ab3603696273176a7b35af6a7d1cf4dafbe5474ab3ac15e1cf640a32758137a00cd8b85d393551dc68aab0004301cc7f93c3a560cb070abda396d38aa66479dab21e441f65194379c0f90b0f78625ea15eba89327cbd83daa08",
+        "APPWRITE_PROJECT_ID": "69968f6e00103006ad04",
+        "APPWRITE_ENDPOINT": "https://appwrite.tareqosama.com/v1"
+      }
+    }
   }
 }

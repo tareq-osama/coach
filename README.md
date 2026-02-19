@@ -45,6 +45,13 @@ Open [http://localhost:3000](http://localhost:3000). Sign in or register, then u
    - `APPWRITE_API_KEY`
    - `APPWRITE_GYM_DATABASE_ID` (optional)
    - `NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID` (optional; for progress photos)
+   - **R2 (Cloudflare) for thumbnails** – optional; enables image upload for thumbnails via `/api/upload`:
+   - `R2_ACCOUNT_ID` – Cloudflare account ID
+   - `R2_ACCESS_KEY_ID` – R2 API token access key
+   - `R2_SECRET_ACCESS_KEY` – R2 API token secret
+   - `R2_BUCKET_NAME` – R2 bucket name
+   - `R2_PUBLIC_URL` – public base URL for the bucket (e.g. `https://pub-xxx.r2.dev` or your custom domain). If not set, upload still works but returned URLs may need to be used with a CDN or custom domain.
+   - `NEXT_PUBLIC_APP_URL` – optional; your app’s public URL (e.g. `https://your-app.vercel.app`). When set, upload API returns image links using this domain. Images are always served via the app at `/v/...` so the R2 URL is not exposed.
 
 2. **Allow your Vercel URL in Appwrite**  
    Login runs in the browser and talks to Appwrite directly. If your Vercel URL is not allowed, you get “failed to fetch” or CORS errors.
