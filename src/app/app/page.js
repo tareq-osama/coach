@@ -17,12 +17,13 @@ import {
   DropdownItem,
   DropdownSection,
   Spinner,
+  Tooltip as HeroUITooltip,
 } from "@heroui/react";
 import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Area,
   AreaChart,
@@ -76,6 +77,31 @@ const ArrowUpIcon = () => (
   </svg>
 );
 
+const ArrowDownIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+  </svg>
+);
+
+/** Percent change vs previous period (e.g. last 30 days vs prior 30 days). Returns { pct, positive } or null. */
+function usePeriodChange(items, periodDays = 30) {
+  return useMemo(() => {
+    if (!items?.length) return null;
+    const now = Date.now();
+    const periodMs = periodDays * 24 * 60 * 60 * 1000;
+    const currentStart = now - periodMs;
+    const previousStart = now - 2 * periodMs;
+    const currentNew = items.filter((m) => new Date(m.$createdAt || 0).getTime() >= currentStart).length;
+    const previousNew = items.filter((m) => {
+      const t = new Date(m.$createdAt || 0).getTime();
+      return t >= previousStart && t < currentStart;
+    }).length;
+    if (previousNew === 0) return currentNew ? { pct: 100, positive: true } : null;
+    const pct = ((currentNew - previousNew) / previousNew) * 100;
+    return { pct: Math.round(pct * 10) / 10, positive: pct >= 0 };
+  }, [items, periodDays]);
+}
+
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** Build chart data: new members per month for last 12 months (from members list). */
@@ -106,40 +132,46 @@ function useMembersChartData(members) {
   }, [members]);
 }
 
-/** Recharts line/area styled with HeroUI theme (primary, foreground, default). */
+/** HeroUI-styled tooltip content for Recharts (matches HeroUI Tooltip look). */
+function ChartTooltipContent({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const item = payload[0];
+  const fullLabel = item.payload?.fullLabel ?? label;
+  return (
+    <div className="rounded-lg border border-default-200 bg-background px-3 py-2 shadow-lg outline-none">
+      <p className="text-sm font-medium text-foreground">{fullLabel}</p>
+      <p className="text-sm text-default-600">
+        New members: <span className="font-semibold text-primary">{item.value}</span>
+      </p>
+    </div>
+  );
+}
+
+/** Recharts area chart: theme primary, container-matching bg, HeroUI-style tooltip, axis text-default-400. */
 function MembersChart({ data }) {
   return (
-    <div className="h-[180px] w-full">
+    <div className="h-[180px] w-full bg-transparent text-default-400 [--chart-primary:#006fee] dark:[--chart-primary:#3694ff]">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--chart-primary,#006fee)" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="var(--chart-primary,#006fee)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-default-200" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-default-300" vertical={false} />
           <XAxis
             dataKey="month"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "hsl(var(--foreground))", opacity: 0.5, fontSize: 12 }}
+            tick={{ fill: "currentColor", fontSize: 12 }}
           />
           <YAxis hide domain={[0, (max) => Math.max(max, 1)]} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--background))",
-              border: "1px solid hsl(var(--default-200))",
-              borderRadius: "var(--radius-lg)",
-            }}
-            labelStyle={{ color: "hsl(var(--foreground))" }}
-            formatter={(value) => [value, "New members"]}
-            labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel}
-          />
+          <RechartsTooltip content={<ChartTooltipContent />} />
           <Area
             type="monotone"
             dataKey="count"
-            stroke="hsl(var(--primary))"
+            stroke="var(--chart-primary,#006fee)"
             strokeWidth={2}
             fill="url(#chartFill)"
           />
@@ -153,12 +185,17 @@ export default function AppHome() {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState("12 months");
   const [members, setMembers] = useState([]);
+  const [workoutPlansList, setWorkoutPlansList] = useState([]);
+  const [exercisesList, setExercisesList] = useState([]);
   const [totalMembers, setTotalMembers] = useState(0);
   const [workoutPlansTotal, setWorkoutPlansTotal] = useState(0);
   const [exercisesTotal, setExercisesTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const chartData = useMembersChartData(members);
+  const membersChange = usePeriodChange(members, 30);
+  const workoutPlansChange = usePeriodChange(workoutPlansList, 30);
+  const exercisesChange = usePeriodChange(exercisesList, 30);
 
   useEffect(() => {
     if (!user?.$id) return;
@@ -173,10 +210,12 @@ export default function AppHome() {
           setMembers(membersRes.documents);
           setTotalMembers(membersRes.total ?? membersRes.documents.length);
         }
-        if (plansRes.total !== undefined) setWorkoutPlansTotal(plansRes.total);
-        else if (plansRes.documents) setWorkoutPlansTotal(plansRes.documents.length);
-        if (exercisesRes.total !== undefined) setExercisesTotal(exercisesRes.total);
-        else if (exercisesRes.documents) setExercisesTotal(exercisesRes.documents.length);
+        const plans = plansRes.documents ?? [];
+        setWorkoutPlansList(plans);
+        setWorkoutPlansTotal(plansRes.total ?? plans.length);
+        const exercises = exercisesRes.documents ?? [];
+        setExercisesList(exercises);
+        setExercisesTotal(exercisesRes.total ?? exercises.length);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -218,7 +257,7 @@ export default function AppHome() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 border border-default-200/50" shadow="sm" radius="lg">
           <CardBody className="p-6">
-            <p className="text-sm text-default-500">Active members</p>
+            <p className="text-sm text-default-700">Active members</p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-semibold text-foreground">
                 {loading ? "—" : totalMembers.toLocaleString()}
@@ -228,7 +267,7 @@ export default function AppHome() {
                 {timeRange === "12 months" ? "12 months" : timeRange}
               </span>
             </div>
-            <div className="mt-4 rounded-lg bg-default-100/80 p-4 dark:bg-default-50/50">
+            <div className="mt-4 rounded-lg bg-transparent p-4">
               {loading ? (
                 <div className="flex h-[180px] items-center justify-center">
                   <Spinner size="md" color="primary" />
@@ -243,10 +282,23 @@ export default function AppHome() {
         <div className="flex flex-col gap-4">
           <Card className="border border-default-200/50" shadow="sm" radius="lg">
             <CardBody className="p-4">
-              <p className="text-sm text-default-500">Total members</p>
-              <p className="text-xl font-semibold text-foreground">
-                {loading ? "—" : totalMembers.toLocaleString()}
-              </p>
+              <p className="text-sm text-default-700">Total members</p>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-2">
+                <p className="text-xl font-semibold text-foreground">
+                  {loading ? "—" : totalMembers.toLocaleString()}
+                </p>
+                {!loading && membersChange && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+                      membersChange.positive ? "text-success-600 bg-success-500/15" : "text-danger-600 bg-danger-500/15"
+                    }`}
+                  >
+                    {membersChange.positive ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                    {membersChange.positive ? "+" : ""}
+                    {membersChange.pct}%
+                  </span>
+                )}
+              </div>
               <Button as={Link} href="/app/members" variant="light" size="sm" className="mt-1 -ml-1 text-primary">
                 View all
               </Button>
@@ -254,10 +306,23 @@ export default function AppHome() {
           </Card>
           <Card className="border border-default-200/50" shadow="sm" radius="lg">
             <CardBody className="p-4">
-              <p className="text-sm text-default-500">Workout plans</p>
-              <p className="text-xl font-semibold text-foreground">
-                {loading ? "—" : workoutPlansTotal.toLocaleString()}
-              </p>
+              <p className="text-sm text-default-700">Workout plans</p>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-2">
+                <p className="text-xl font-semibold text-foreground">
+                  {loading ? "—" : workoutPlansTotal.toLocaleString()}
+                </p>
+                {!loading && workoutPlansChange && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+                      workoutPlansChange.positive ? "text-success-600 bg-success-500/15" : "text-danger-600 bg-danger-500/15"
+                    }`}
+                  >
+                    {workoutPlansChange.positive ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                    {workoutPlansChange.positive ? "+" : ""}
+                    {workoutPlansChange.pct}%
+                  </span>
+                )}
+              </div>
               <Button as={Link} href="/app/workout-plans" variant="light" size="sm" className="mt-1 -ml-1 text-primary">
                 View all
               </Button>
@@ -265,10 +330,23 @@ export default function AppHome() {
           </Card>
           <Card className="border border-default-200/50" shadow="sm" radius="lg">
             <CardBody className="p-4">
-              <p className="text-sm text-default-500">Exercises</p>
-              <p className="text-xl font-semibold text-foreground">
-                {loading ? "—" : exercisesTotal.toLocaleString()}
-              </p>
+              <p className="text-sm text-default-700">Exercises</p>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-2">
+                <p className="text-xl font-semibold text-foreground">
+                  {loading ? "—" : exercisesTotal.toLocaleString()}
+                </p>
+                {!loading && exercisesChange && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+                      exercisesChange.positive ? "text-success-600 bg-success-500/15" : "text-danger-600 bg-danger-500/15"
+                    }`}
+                  >
+                    {exercisesChange.positive ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                    {exercisesChange.positive ? "+" : ""}
+                    {exercisesChange.pct}%
+                  </span>
+                )}
+              </div>
               <Button as={Link} href="/app/exercises" variant="light" size="sm" className="mt-1 -ml-1 text-primary">
                 View all
               </Button>
@@ -312,7 +390,7 @@ export default function AppHome() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">Add member</p>
-                <p className="text-sm text-default-500">Create a profile or import</p>
+                <p className="text-sm text-default-600">Create a profile or import</p>
               </div>
             </CardBody>
           </Card>
@@ -323,7 +401,7 @@ export default function AppHome() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">Workout plans</p>
-                <p className="text-sm text-default-500">Create and assign routines</p>
+                <p className="text-sm text-default-600">Create and assign routines</p>
               </div>
             </CardBody>
           </Card>
@@ -334,7 +412,7 @@ export default function AppHome() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">Meal plans</p>
-                <p className="text-sm text-default-500">Create and assign meal plans</p>
+                <p className="text-sm text-default-600">Create and assign meal plans</p>
               </div>
             </CardBody>
           </Card>
@@ -353,7 +431,7 @@ export default function AppHome() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">Reports & analytics</p>
-                  <p className="text-xs text-default-500">Progress and insights</p>
+                  <p className="text-xs text-default-600">Progress and insights</p>
                 </div>
               </CardBody>
             </Card>
@@ -364,7 +442,7 @@ export default function AppHome() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">Sessions</p>
-                  <p className="text-xs text-default-500">Schedule and track</p>
+                  <p className="text-xs text-default-600">Schedule and track</p>
                 </div>
               </CardBody>
             </Card>
@@ -375,7 +453,7 @@ export default function AppHome() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">Forms</p>
-                  <p className="text-xs text-default-500">Custom forms</p>
+                  <p className="text-xs text-default-600">Custom forms</p>
                 </div>
               </CardBody>
             </Card>
@@ -386,7 +464,7 @@ export default function AppHome() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">Meal logs</p>
-                  <p className="text-xs text-default-500">Log client meals</p>
+                  <p className="text-xs text-default-600">Log client meals</p>
                 </div>
               </CardBody>
             </Card>
@@ -416,7 +494,7 @@ export default function AppHome() {
                 <Spinner size="md" color="primary" />
               </div>
             ) : topMembers.length === 0 ? (
-              <p className="py-8 text-center text-sm text-default-500">
+              <p className="py-8 text-center text-sm text-default-600">
                 No members yet. Add your first member to get started.
               </p>
             ) : (
@@ -433,7 +511,7 @@ export default function AppHome() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground truncate">{m.name || "Unnamed"}</p>
-                        <p className="text-sm text-default-500">{formatMemberSince(m.$createdAt)}</p>
+                        <p className="text-sm text-default-600">{formatMemberSince(m.$createdAt)}</p>
                       </div>
                       <span className="h-2 w-2 shrink-0 rounded-full bg-success-500" aria-hidden />
                     </Link>

@@ -99,7 +99,7 @@ export default function MemberPageHeader({
         {/* Breadcrumbs */}
         <Breadcrumbs className="mb-3" size="sm">
           <BreadcrumbItem startContent={<HomeIcon />} href="/app" as={Link}>
-            App
+            Home
           </BreadcrumbItem>
           {breadcrumbs.slice(0, -1).map((crumb) => (
             <BreadcrumbItem key={crumb}>{crumb}</BreadcrumbItem>

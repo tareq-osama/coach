@@ -82,6 +82,10 @@ const icons = {
 
 const navSections = [
   {
+    title: "Overview",
+    links: [{ href: "/app", label: "Overview", icon: icons.chart }],
+  },
+  {
     title: "Training",
     links: [
       { href: "/app/members", label: "Members", icon: icons.users },
@@ -146,42 +150,64 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="gym-app flex min-h-screen bg-default-100 dark:bg-default-50">
-      {/* Sidebar overlay (mobile) */}
-      <Button
-        isIconOnly
-        aria-label="Toggle menu"
-        variant="flat"
-        className="gym-sidebar-toggle fixed left-4 top-4 z-50 lg:hidden bg-content2 text-foreground border border-default-200"
-        onPress={() => setSidebarOpen((o) => !o)}
-      >
-        {sidebarOpen ? (
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        )}
-      </Button>
+      {/* Topbar: same background as sidebar */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex h-14 shrink-0 items-center justify-between border-b border-default-200 bg-default-200 px-4 dark:bg-default-100">
+        <div className="flex items-center gap-2">
+          <Button
+            isIconOnly
+            aria-label="Toggle menu"
+            variant="light"
+            className="gym-sidebar-toggle lg:hidden"
+            onPress={() => setSidebarOpen((o) => !o)}
+          >
+            {sidebarOpen ? (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </Button>
+          <Button
+            as={Link}
+            href="/app"
+            variant="light"
+            className="gym-topbar-brand h-auto px-2 py-1.5 text-base font-semibold text-foreground hover:bg-default-100"
+            onPress={() => setSidebarOpen(false)}
+          >
+            Gym Coach
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            as={Link}
+            href="/app"
+            variant="light"
+            size="sm"
+            className="hidden sm:inline-flex"
+          >
+            Coach Profile
+          </Button>
+          <Button
+            variant="light"
+            size="sm"
+            className="gap-1.5"
+            startContent={icons.logout}
+            onPress={handleLogout}
+          >
+            Sign out
+          </Button>
+        </div>
+      </header>
 
       <aside
-        className={`gym-sidebar fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col transform overflow-hidden border-r border-default-200 bg-default-200 dark:bg-default-100 transition-transform duration-200 lg:translate-x-0 pt-14 lg:pt-4 ${
+        className={`gym-sidebar fixed left-0 top-14 z-40 flex h-[calc(100vh-3.5rem)] w-64 flex-col transform overflow-hidden border-r border-default-200 bg-default-200 dark:bg-default-100 transition-transform duration-200 lg:translate-x-0 pt-2 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="shrink-0 p-4">
-            <Button
-              as={Link}
-              href="/app"
-              variant="light"
-              className="gym-sidebar-brand h-auto justify-start px-3 py-2 text-lg font-semibold text-foreground hover:bg-default-100"
-              onPress={() => setSidebarOpen(false)}
-            >
-              Gym Coach
-            </Button>
-          </div>
           <ScrollShadow
             hideScrollBar
             size={60}
@@ -190,7 +216,7 @@ export default function AppLayout({ children }) {
             <nav className="flex flex-col gap-6 px-3 pb-4 pt-1">
               {navSections.map((section) => (
                 <div key={section.title} className="gym-sidebar-section">
-                  <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold tracking-wider text-default-500">
+                  <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold tracking-wider text-default-600">
                     {section.title}
                   </p>
                   <ul className="space-y-1">
@@ -216,7 +242,7 @@ export default function AppLayout({ children }) {
             </nav>
           </ScrollShadow>
           <Divider className="bg-default-200 shrink-0" />
-          <div className="shrink-0 p-3 space-y-2">
+          <div className="shrink-0 p-3">
             {mounted && (
               <Button
                 variant="light"
@@ -234,22 +260,11 @@ export default function AppLayout({ children }) {
                 {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
               </Button>
             )}
-            <p className="gym-sidebar-user truncate px-3 py-1.5 text-sm text-default-500" title={user?.email}>
-              {user?.name || user?.email}
-            </p>
-            <Button
-              variant="light"
-              className="gym-sidebar-logout h-auto w-full justify-start gap-2 px-3 py-1.5 text-left text-sm text-foreground hover:bg-default-100"
-              startContent={icons.logout}
-              onPress={handleLogout}
-            >
-              Sign out
-            </Button>
           </div>
         </div>
       </aside>
 
-      <main className="gym-main min-h-screen flex-1 pt-14 lg:pt-6 lg:pl-64">
+      <main className="gym-main min-h-screen flex-1 pt-20 lg:pl-64">
         <div className="mx-auto max-w-6xl px-4 pb-8">{children}</div>
       </main>
 
