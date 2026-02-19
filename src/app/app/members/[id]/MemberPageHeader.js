@@ -11,6 +11,7 @@ import {
   Divider,
 } from "@heroui/react";
 import { imageUrl } from "@/lib/image-url";
+import ImageUploader from "../../components/ImageUploader";
 
 const HomeIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -40,6 +41,7 @@ const DEFAULT_AVATAR = "https://i.pravatar.cc/300?u=";
  */
 export default function MemberPageHeader({
   avatarSrc,
+  onAvatarChange,
   name,
   email,
   memberId,
@@ -63,7 +65,7 @@ export default function MemberPageHeader({
       <div className="w-full h-44 rounded-t-xl bg-linear-to-r from-primary-100 to-secondary-100 dark:from-primary-500/20 dark:to-secondary-500/20" />
 
       <div className="px-6 pb-5">
-        {/* Avatar (overlaps banner) */}
+        {/* Avatar (overlaps banner); editable when onAvatarChange provided */}
         <div className="-mt-12 mb-3 w-fit">
           <Badge
             content={<CheckIcon />}
@@ -74,12 +76,23 @@ export default function MemberPageHeader({
               badge: "w-6 h-6 border-2 border-background bottom-1 right-1 flex items-center justify-center",
             }}
           >
-            <Avatar
-              src={avatarUrl}
-              name={name || "?"}
-              className="w-24 h-24 ring-4 ring-background"
-              showFallback
-            />
+            {onAvatarChange ? (
+              <ImageUploader
+                variant="avatar"
+                value={avatarSrc}
+                onValueChange={onAvatarChange}
+                prefix="members"
+                avatarSize="lg"
+                fallbackName={name || "?"}
+              />
+            ) : (
+              <Avatar
+                src={avatarUrl}
+                name={name || "?"}
+                className="w-24 h-24 ring-4 ring-background"
+                showFallback
+              />
+            )}
           </Badge>
         </div>
 

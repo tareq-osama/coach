@@ -17,15 +17,15 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Accordion,
-  AccordionItem,
+  Tabs,
+  Tab,
   Select,
   SelectItem,
   NumberInput,
+  addToast,
 } from "@heroui/react";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
-import ThumbnailUpload from "../../components/ThumbnailUpload";
 import ProgressPhotosSection from "./ProgressPhotosSection";
 import MemberReportsSection from "./MemberReportsSection";
 import MemberPageHeader from "./MemberPageHeader";
@@ -128,14 +128,15 @@ export default function MemberDetailPage() {
     setMealPlanIds(mpIds);
   }, [member?.$id, workoutPlans, mealPlans]);
 
-  async function handleSave(e) {
-    e.preventDefault();
+  async function handleSave(e, options = {}) {
+    if (e?.preventDefault) e.preventDefault();
+    const managedByCaller = options.managedByCaller === true;
     setSaveError(null);
     if (!user?.$id) {
       setSaveError("You must be signed in to save.");
-      return;
+      return false;
     }
-    setSaving(true);
+    if (!managedByCaller) setSaving(true);
     try {
       const joinDateIso =
         form.join_date && form.join_date.length >= 10
@@ -166,8 +167,34 @@ export default function MemberDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.details || data.error);
       setMember((prev) => (prev ? { ...prev, ...data } : data));
+      return true;
     } catch (err) {
       setSaveError(err.message);
+      return false;
+    } finally {
+      if (!managedByCaller) setSaving(false);
+    }
+  }
+
+  /** Single Save: member details + measurements, then plan assignments. */
+  async function handleSaveAll() {
+    setSaveError(null);
+    setPlansError(null);
+    if (!user?.$id) {
+      setSaveError("You must be signed in to save.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const detailsSaved = await handleSave({ preventDefault: () => {} }, { managedByCaller: true });
+      const plansSaved = await savePlanAssignments();
+      if (detailsSaved && plansSaved) {
+        addToast({
+          title: "Saved",
+          description: "Member details and plan assignments have been saved.",
+          color: "success",
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -210,8 +237,10 @@ export default function MemberDetailPage() {
       ]);
       if (wpRes.documents) setWorkoutPlans(wpRes.documents);
       if (mpRes.documents) setMealPlans(mpRes.documents);
+      return true;
     } catch (err) {
       setPlansError(err.message);
+      return false;
     } finally {
       setSavingPlans(false);
     }
@@ -265,42 +294,35 @@ export default function MemberDetailPage() {
   return (
     <div className="space-y-6">
       <MemberPageHeader
-        avatarSrc={member.thumbnail}
+        avatarSrc={form.thumbnail}
+        onAvatarChange={(url) => setForm((f) => ({ ...f, thumbnail: url }))}
         name={member.name}
         email={member.email}
         memberId={member.$id}
         breadcrumbs={["Members", member.name || "Member"]}
         primaryLabel="Save"
-        secondaryLabel="Delete member"
+        secondaryLabel={null}
         tertiaryLabel="Back"
         tertiaryHref="/app/members"
-        onPrimary={() => handleSave({ preventDefault: () => {} })}
+        onPrimary={handleSaveAll}
         onSecondary={onDeleteOpen}
         onSearch={(value) => setSearchQuery(value)}
         isPrimaryLoading={saving}
         showSearch={false}
       />
 
-      <Accordion selectionMode="multiple" defaultExpandedKeys={["details", "measurements", "plans", "photos", "reports"]}>
-        <AccordionItem key="details" aria-label="Member details" title="Member details">
-          <Card shadow="sm" className="border-none">
-            <CardBody className="gap-4">
-              <form onSubmit={handleSave} className="flex flex-col gap-4">
+      <Tabs aria-label="Member sections" className="w-full">
+        <Tab key="details" title="Details">
+          <div className="space-y-4 pt-2">
+            {/* Member details */}
+            <Card shadow="sm" className="border-none">
+              <CardBody className="gap-4">
                 {saveError && (
                   <p className="rounded-lg bg-danger-50 p-3 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
                     {saveError}
                   </p>
                 )}
-                <div className="grid gap-6 sm:grid-cols-2">
-                <div className="flex flex-col gap-4">
-                  <ThumbnailUpload
-                    value={form.thumbnail}
-                    onValueChange={(url) => setForm((f) => ({ ...f, thumbnail: url }))}
-                    label="Profile photo"
-                    prefix="members"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Name"
                     value={form.name}
@@ -335,6 +357,7 @@ export default function MemberDetailPage() {
                       const v = Array.from(keys)[0] ?? "";
                       setForm((f) => ({ ...f, status: v }));
                     }}
+                    className="sm:col-span-2"
                   >
                     {STATUS_OPTIONS.map((o) => (
                       <SelectItem key={o.value}>{o.label}</SelectItem>
@@ -346,151 +369,148 @@ export default function MemberDetailPage() {
                     onValueChange={(v) => setForm((f) => ({ ...f, goals: v }))}
                     placeholder="Member fitness goals and objectives"
                     minRows={3}
+                    className="sm:col-span-2"
                   />
                   <Textarea
                     label="Notes"
                     value={form.notes}
                     onValueChange={(v) => setForm((f) => ({ ...f, notes: v }))}
                     placeholder="Additional notes"
+                    className="sm:col-span-2"
                   />
                 </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" color="primary" isLoading={saving}>
-                    Save details
-                  </Button>
-                  <Button as={Link} href="/app/members" variant="flat">
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardBody>
-          </Card>
-        </AccordionItem>
+              </CardBody>
+            </Card>
 
-        <AccordionItem key="measurements" aria-label="Body measurements" title="Body measurements">
-          <Card shadow="sm" className="border-none">
-            <CardBody className="gap-4">
-              <p className="text-sm text-default-500">
-                Record weight and body measurements for this member.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <NumberInput
-                  label="Weight (kg)"
-                  value={form.weight_kg}
-                  onValueChange={(v) => setForm((f) => ({ ...f, weight_kg: v }))}
-                  minValue={0}
-                  step={0.1}
-                />
-                <NumberInput
-                  label="Height (cm)"
-                  value={form.height_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, height_cm: v }))}
-                  minValue={0}
-                />
-                <NumberInput
-                  label="Chest (cm)"
-                  value={form.chest_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, chest_cm: v }))}
-                  minValue={0}
-                />
-                <NumberInput
-                  label="Waist (cm)"
-                  value={form.waist_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, waist_cm: v }))}
-                  minValue={0}
-                />
-                <NumberInput
-                  label="Hips (cm)"
-                  value={form.hips_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, hips_cm: v }))}
-                  minValue={0}
-                />
-                <NumberInput
-                  label="Arms (cm)"
-                  value={form.arms_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, arms_cm: v }))}
-                  minValue={0}
-                />
-                <NumberInput
-                  label="Thighs (cm)"
-                  value={form.thighs_cm}
-                  onValueChange={(v) => setForm((f) => ({ ...f, thighs_cm: v }))}
-                  minValue={0}
-                />
-              </div>
-              <Button
-                color="primary"
-                variant="flat"
-                onPress={(e) => handleSave({ preventDefault: () => {} })}
-                isLoading={saving}
-              >
-                Save measurements
-              </Button>
-            </CardBody>
-          </Card>
-        </AccordionItem>
-
-        <AccordionItem key="plans" aria-label="Assigned plans" title="Assigned workout & meal plans">
-          <Card shadow="sm" className="border-none">
-            <CardBody className="gap-4">
-              {plansError && (
-                <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
-                  {plansError}
+            {/* Body measurements */}
+            <Card shadow="sm" className="border-none">
+              <CardBody className="gap-4">
+                <p className="text-sm text-default-500">
+                  Record weight and body measurements for this member.
                 </p>
-              )}
-              <Select
-                label="Workout plans"
-                placeholder="Select one or many"
-                selectionMode="multiple"
-                selectedKeys={workoutPlanIds}
-                onSelectionChange={(keys) => setWorkoutPlanIds(new Set(keys))}
-                description="Assign workout plans to this member. They will see these in their portal."
-              >
-                {(workoutPlans ?? []).map((p) => (
-                  <SelectItem key={p.$id} textValue={p.name}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </Select>
-              <Select
-                label="Meal plans"
-                placeholder="Select one or many"
-                selectionMode="multiple"
-                selectedKeys={mealPlanIds}
-                onSelectionChange={(keys) => setMealPlanIds(new Set(keys))}
-                description="Assign meal plans to this member. They will see these in their portal."
-              >
-                {(mealPlans ?? []).map((p) => (
-                  <SelectItem key={p.$id} textValue={p.name}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </Select>
-              <Button
-                color="primary"
-                variant="flat"
-                onPress={savePlanAssignments}
-                isLoading={savingPlans}
-              >
-                Save plan assignments
-              </Button>
-            </CardBody>
-          </Card>
-        </AccordionItem>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <NumberInput
+                    label="Weight (kg)"
+                    value={form.weight_kg}
+                    onValueChange={(v) => setForm((f) => ({ ...f, weight_kg: v }))}
+                    minValue={0}
+                    step={0.1}
+                  />
+                  <NumberInput
+                    label="Height (cm)"
+                    value={form.height_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, height_cm: v }))}
+                    minValue={0}
+                  />
+                  <NumberInput
+                    label="Chest (cm)"
+                    value={form.chest_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, chest_cm: v }))}
+                    minValue={0}
+                  />
+                  <NumberInput
+                    label="Waist (cm)"
+                    value={form.waist_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, waist_cm: v }))}
+                    minValue={0}
+                  />
+                  <NumberInput
+                    label="Hips (cm)"
+                    value={form.hips_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, hips_cm: v }))}
+                    minValue={0}
+                  />
+                  <NumberInput
+                    label="Arms (cm)"
+                    value={form.arms_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, arms_cm: v }))}
+                    minValue={0}
+                  />
+                  <NumberInput
+                    label="Thighs (cm)"
+                    value={form.thighs_cm}
+                    onValueChange={(v) => setForm((f) => ({ ...f, thighs_cm: v }))}
+                    minValue={0}
+                  />
+                </div>
+              </CardBody>
+            </Card>
 
-        <AccordionItem key="photos" aria-label="Progress photos" title="Progress photos">
-          <ProgressPhotosSection memberId={member.$id} />
-        </AccordionItem>
+            {/* Plan assignments */}
+            <Card shadow="sm" className="border-none">
+              <CardBody className="gap-4">
+                {plansError && (
+                  <p className="rounded-lg bg-danger-50 p-2 text-sm text-danger-600 dark:bg-danger-50/20 dark:text-danger-400">
+                    {plansError}
+                  </p>
+                )}
+                <Select
+                  label="Workout plans"
+                  placeholder="Select one or many"
+                  selectionMode="multiple"
+                  selectedKeys={workoutPlanIds}
+                  onSelectionChange={(keys) => setWorkoutPlanIds(new Set(keys))}
+                  description="Assign workout plans to this member. They will see these in their portal."
+                >
+                  {(workoutPlans ?? []).map((p) => (
+                    <SelectItem key={p.$id} textValue={p.name}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+                <Select
+                  label="Meal plans"
+                  placeholder="Select one or many"
+                  selectionMode="multiple"
+                  selectedKeys={mealPlanIds}
+                  onSelectionChange={(keys) => setMealPlanIds(new Set(keys))}
+                  description="Assign meal plans to this member. They will see these in their portal."
+                >
+                  {(mealPlans ?? []).map((p) => (
+                    <SelectItem key={p.$id} textValue={p.name}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+                <p className="text-sm text-default-500">
+                  Use the Save button in the header to persist plan assignments.
+                </p>
+              </CardBody>
+            </Card>
 
-        <AccordionItem key="reports" aria-label="Reports" title="Reports & analytics">
-          <Card shadow="sm" className="border-none">
-            <CardBody>
-              <MemberReportsSection memberId={member.$id} memberName={member.name} />
-            </CardBody>
-          </Card>
-        </AccordionItem>
-      </Accordion>
+            {/* Progress photos */}
+            <ProgressPhotosSection memberId={member.$id} />
+          </div>
+        </Tab>
+
+        <Tab key="reports" title="Reports">
+          <div className="pt-2">
+            <Card shadow="sm" className="border-none">
+              <CardBody>
+                <MemberReportsSection memberId={member.$id} memberName={member.name} />
+              </CardBody>
+            </Card>
+          </div>
+        </Tab>
+
+        <Tab key="settings" title="Settings">
+          <div className="pt-2">
+            <Card shadow="sm" className="border-danger-200 bg-danger-50 dark:bg-danger-50/10">
+              <CardBody className="gap-3">
+                <p className="font-medium text-danger-700 dark:text-danger-400">Danger zone</p>
+                <p className="text-sm text-danger-600 dark:text-danger-400">
+                  Permanently delete <strong>{member.name || "this member"}</strong> and all associated data. This cannot be undone.
+                </p>
+                <div>
+                  <Button color="danger" variant="flat" onPress={onDeleteOpen}>
+                    Delete member
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </Tab>
+      </Tabs>
 
       <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
         <ModalContent>
