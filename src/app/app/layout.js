@@ -108,7 +108,7 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="gym-app flex min-h-screen bg-default-100 dark:bg-default-50">
+    <div className="gym-app flex min-h-screen overflow-x-hidden bg-default-100 dark:bg-default-50">
       {/* Mobile hamburger — floating, only on small screens */}
       <Button
         isIconOnly
@@ -351,7 +351,7 @@ export default function AppLayout({ children }) {
         </div>
       </aside>
 
-      <main className="gym-main min-h-screen flex-1 py-8 lg:pl-64">
+      <main className="gym-main min-h-screen flex-1 min-w-0 py-8 lg:pl-64">
         <div className="mx-auto max-w-6xl px-4">{children}</div>
       </main>
 

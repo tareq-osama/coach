@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         />
         <link rel="icon" type="image/svg+xml" href="/appwrite.svg" />
       </head>
-      <body className="min-h-screen bg-background text-foreground font-[Inter] text-sm" suppressHydrationWarning>
+      <body className="min-h-screen overflow-x-hidden bg-background text-foreground font-[Inter] text-sm" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

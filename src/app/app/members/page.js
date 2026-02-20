@@ -527,8 +527,9 @@ const onSearchChange = useCallback((value) => {
                   sortedItems.length === 0 ? (
                     <EmptyState pathname="/app/members" message="No members found." className="py-12" />
                   ) : (
-                    <div className="rounded-lg border border-default-200">
-                      <div className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3 sm:px-6">
+                    <div className="w-full min-w-0 overflow-x-auto rounded-lg border border-default-200">
+                      <div className="min-w-[640px]">
+                      <div className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3">
                         <Checkbox
                           isSelected={isAllListSelected}
                           onValueChange={toggleSelectAllList}
@@ -557,7 +558,7 @@ const onSearchChange = useCallback((value) => {
                         {sortedItems.map((member) => (
                           <li
                             key={member.$id}
-                            className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 px-4 py-3 sm:px-6"
+                            className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 px-4 py-3"
                           >
                             <Checkbox
                               isSelected={isRowSelected(member.$id)}
@@ -620,6 +621,7 @@ const onSearchChange = useCallback((value) => {
                           </li>
                         ))}
                       </ul>
+                      </div>
                     </div>
                   )
                 ) : sortedItems.length === 0 ? (
