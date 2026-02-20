@@ -111,11 +111,11 @@ export default function ImageUploader({
         <Avatar
           src={displayUrl}
           name={fallbackName || "?"}
-          className={`${sizeClass} ring-4 ring-background transition-opacity ${hover ? "opacity-80" : ""}`}
+          className={`${sizeClass} ring-0 border-0 transition-opacity ${hover ? "opacity-80" : ""}`}
           showFallback
         />
         {hover && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/50 ring-4 ring-background">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/50">
             {uploading ? (
               <Spinner size="sm" color="primary" classNames={{ circle1: "border-b-primary-foreground", circle2: "border-primary-foreground" }} />
             ) : displayUrl ? (

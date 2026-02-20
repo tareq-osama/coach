@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { getAccount, deleteSession } from "@/lib/appwrite-auth";
+import { getAccount, getPrefs, deleteSession } from "@/lib/appwrite-auth";
 
 const AuthContext = createContext({
   user: null,
@@ -24,7 +24,16 @@ export function AuthProvider({ children }) {
   async function refresh() {
     setLoading(true);
     const u = await getAccount();
-    setUser(u);
+    if (u) {
+      try {
+        const prefs = await getPrefs();
+        setUser({ ...u, prefs: prefs && typeof prefs === "object" ? prefs : {} });
+      } catch {
+        setUser(u);
+      }
+    } else {
+      setUser(null);
+    }
     setLoading(false);
   }
 

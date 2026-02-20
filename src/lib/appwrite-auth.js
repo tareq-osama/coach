@@ -34,4 +34,22 @@ export async function deleteSession() {
   }
 }
 
+export async function updateName(name) {
+  await account.updateName(name || "");
+  return getAccount();
+}
+
+export async function getPrefs() {
+  try {
+    return await account.getPrefs();
+  } catch {
+    return {};
+  }
+}
+
+export async function updatePrefs(prefs) {
+  await account.updatePrefs(prefs);
+  return getAccount();
+}
+
 export { account };

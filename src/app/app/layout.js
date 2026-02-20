@@ -4,13 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { Button, Spinner, Divider, ScrollShadow } from "@heroui/react";
+import { Button, Spinner, Divider, ScrollShadow, Avatar, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { useAuth } from "@/app/auth-context";
+import { imageUrl } from "@/lib/image-url";
+import CoachSettingsDialog from "./components/CoachSettingsDialog";
 import "./app.css";
 
 const iconClass = "h-5 w-5 shrink-0";
+const iconClassSm = "h-4 w-4 shrink-0";
 
 const icons = {
+  person: (
+    <svg className={iconClassSm} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
   users: (
     <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -78,7 +86,28 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
     </svg>
   ),
+  chevronRight: (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  ),
 };
+
+const SunIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
+const MoonIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+  </svg>
+);
+const SystemIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
 
 const navSections = [
   {
@@ -119,10 +148,14 @@ export default function AppLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout } = useAuth();
-  const { setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const selectedTheme = mounted ? (theme ?? "system") : "system";
 
   useEffect(() => {
     if (loading) return;
@@ -181,26 +214,112 @@ export default function AppLayout({ children }) {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            as={Link}
-            href="/app"
-            variant="light"
-            size="sm"
-            className="hidden sm:inline-flex"
-          >
-            Coach Profile
-          </Button>
-          <Button
-            variant="light"
-            size="sm"
-            className="gap-1.5"
-            startContent={icons.logout}
-            onPress={handleLogout}
-          >
-            Sign out
-          </Button>
+          <Popover placement="bottom-end" isOpen={popoverOpen} onOpenChange={setPopoverOpen} showArrow>
+            <PopoverTrigger>
+              <Button
+                variant="light"
+                isIconOnly
+                className="rounded-full p-1 min-w-0 min-h-0 w-auto h-auto m-0.5"
+                aria-label="Coach menu"
+              >
+                <Avatar
+                  src={user?.prefs?.avatarUrl ? imageUrl(user.prefs.avatarUrl) : undefined}
+                  name={user?.name || user?.email}
+                  className="w-8 h-8 shrink-0"
+                  showFallback
+                />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="py-2 px-1 w-[220px]">
+              <div className="flex flex-col gap-2.5 w-full min-w-0">
+                <div className="flex items-center gap-2.5 px-3 pt-0.5 pb-1">
+               
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate">{user?.name || "Coach"}</span>
+                    <span className="text-xs text-default-600 rounded-full py-0.5 w-fit">Coach</span>
+                  </div>
+                </div>
+                <div className="min-h-8 flex items-center px-3 py-0">
+                  <p className="text-sm font-normal text-foreground truncate w-full">
+                    {user?.email}
+                  </p>
+                </div>
+                <Button
+                  variant="light"
+                  size="sm"
+                  className="justify-between w-full"
+                  endContent={icons.person}
+                  onPress={() => {
+                    setPopoverOpen(false);
+                    setSettingsOpen(true);
+                  }}
+                >
+                  Account
+                </Button>
+                <Button
+                  variant="light"
+                  size="sm"
+                  color="danger"
+                  className="justify-between w-full"
+                  endContent={icons.logout}
+                  onPress={() => {
+                    setPopoverOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  Sign out
+                </Button>
+                {mounted && (
+                  <div className="min-h-8 flex items-center justify-between gap-3 px-3 py-0 w-full">
+                    <span className="text-sm font-normal text-foreground shrink-0">Theme</span>
+                    <div className="flex rounded-md bg-default-100 dark:bg-default-100 p-0.5 gap-0.5 shrink-0">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        className="min-w-6 min-h-6 w-6 h-6 [&_svg]:h-4 [&_svg]:w-4"
+                        variant={selectedTheme === "light" ? "solid" : "light"}
+                        color={selectedTheme === "light" ? "primary" : "default"}
+                        aria-label="Light mode"
+                        onPress={() => setTheme("light")}
+                      >
+                        <SunIcon />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        className="min-w-7 min-h-7 w-7 h-7 [&_svg]:h-4 [&_svg]:w-4"
+                        variant={selectedTheme === "dark" ? "solid" : "light"}
+                        color={selectedTheme === "dark" ? "primary" : "default"}
+                        aria-label="Dark mode"
+                        onPress={() => setTheme("dark")}
+                      >
+                        <MoonIcon />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        className="min-w-7 min-h-7 w-7 h-7 [&_svg]:h-4 [&_svg]:w-4"
+                        variant={selectedTheme === "system" ? "solid" : "light"}
+                        color={selectedTheme === "system" ? "primary" : "default"}
+                        aria-label="System theme"
+                        onPress={() => setTheme("system")}
+                      >
+                        <SystemIcon />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
+
+      <CoachSettingsDialog
+        isOpen={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onSaved={() => {}}
+      />
 
       <aside
         className={`gym-sidebar fixed left-0 top-14 z-40 flex h-[calc(100vh-3.5rem)] w-64 flex-col transform overflow-hidden border-r border-default-200 bg-default-200 dark:bg-default-100 transition-transform duration-200 lg:translate-x-0 pt-2 ${
@@ -241,26 +360,6 @@ export default function AppLayout({ children }) {
               ))}
             </nav>
           </ScrollShadow>
-          <Divider className="bg-default-200 shrink-0" />
-          <div className="shrink-0 p-3">
-            {mounted && (
-              <Button
-                variant="light"
-                size="sm"
-                className="gym-sidebar-link h-auto w-full justify-start px-3 py-1.5 text-left text-sm text-foreground hover:bg-default-100"
-                onPress={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                startContent={
-                  resolvedTheme === "dark" ? (
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                  ) : (
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                  )
-                }
-              >
-                {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-              </Button>
-            )}
-          </div>
         </div>
       </aside>
 
