@@ -3,6 +3,45 @@
   font-family: inherit;
 }
 
+/* Nav icon color palette – use these variables to tune for light/dark (HeroUI-like vibrance) */
+:root {
+  --gym-nav-color-1: #006fee;   /* primary */
+  --gym-nav-color-2: #0d9488;   /* teal */
+  --gym-nav-color-3: #17c964;   /* success */
+  --gym-nav-color-4: #f5a524;   /* warning */
+  --gym-nav-color-5: #f31260;   /* danger */
+  --gym-nav-color-6: #7828c8;   /* secondary / violet */
+  --gym-nav-color-7: #06b6d4;   /* cyan */
+  --gym-nav-color-8: #22c55e;   /* emerald */
+  --gym-nav-color-9: #eab308;   /* yellow */
+  --gym-nav-color-10: #ea580c;  /* orange */
+  --gym-nav-color-11: #84cc16;  /* lime */
+  --gym-nav-color-12: #64748b;  /* slate */
+  --gym-nav-color-13: #94a3b8;  /* muted grey */
+  --gym-nav-color-14: #64748b;  /* muted slate */
+  --gym-nav-color-15: #475569;  /* muted grey dark */
+  --gym-nav-color-16: #cbd5e1;  /* muted grey light */
+}
+
+.dark {
+  --gym-nav-color-1: #3b82f6;
+  --gym-nav-color-2: #14b8a6;
+  --gym-nav-color-3: #22c55e;
+  --gym-nav-color-4: #f59e0b;
+  --gym-nav-color-5: #f43f5e;
+  --gym-nav-color-6: #8b5cf6;
+  --gym-nav-color-7: #06b6d4;
+  --gym-nav-color-8: #10b981;
+  --gym-nav-color-9: #eab308;
+  --gym-nav-color-10: #f97316;
+  --gym-nav-color-11: #84cc16;
+  --gym-nav-color-12: #64748b;
+  --gym-nav-color-13: #64748b;
+  --gym-nav-color-14: #475569;
+  --gym-nav-color-15: #334155;
+  --gym-nav-color-16: #94a3b8;
+}
+
 /* Sidebar scroll: scrollbar only on hover */
 .gym-sidebar .gym-sidebar-scroll {
   scrollbar-width: thin;
@@ -52,7 +91,7 @@
   scroll-margin-top: 0.5rem;
 }
 
-/* Active nav item: full opacity icon */
+/* Active nav item: full opacity icon when using default (no custom color) */
 .gym-sidebar-link-active .gym-sidebar-icon {
   opacity: 1;
 }

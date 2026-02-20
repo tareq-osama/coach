@@ -10,6 +10,27 @@ import { imageUrl } from "@/lib/image-url";
 import CoachSettingsDialog from "./components/CoachSettingsDialog";
 import "./app.css";
 
+const NAV_ITEM_COLORS_KEY = "gym-nav-item-colors";
+const NAV_COLOR_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"];
+
+/** Default color key (1–12) per nav href; user can override via context menu. */
+const DEFAULT_NAV_ITEM_COLORS = {
+  "/app": "1",
+  "/app/members": "2",
+  "/app/exercises": "4",
+  "/app/muscle-groups": "6",
+  "/app/workout-modules": "5",
+  "/app/workout-plans": "2",
+  "/app/sessions": "7",
+  "/app/meals": "3",
+  "/app/meal-categories": "8",
+  "/app/meals-modules": "2",
+  "/app/meal-plans": "11",
+  "/app/meal-logs": "7",
+  "/app/forms": "4",
+  "/app/reports": "1",
+};
+
 const iconClass = "h-5 w-5 shrink-0";
 const iconClassSm = "h-4 w-4 shrink-0";
 
@@ -153,7 +174,36 @@ export default function AppLayout({ children }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [navItemColors, setNavItemColors] = useState({});
+  const [contextMenuFor, setContextMenuFor] = useState(null); // item.href when color popover is open
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      const raw = localStorage.getItem(NAV_ITEM_COLORS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") setNavItemColors(parsed);
+      }
+    } catch (_) {}
+  }, [mounted]);
+
+  const setNavItemColor = (href, colorKey) => {
+    setNavItemColors((prev) => {
+      const next = { ...prev, [href]: colorKey };
+      try {
+        localStorage.setItem(NAV_ITEM_COLORS_KEY, JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  const getIconColorKey = (href) => {
+    const stored = navItemColors[href];
+    const key = NAV_COLOR_KEYS.includes(stored) ? stored : DEFAULT_NAV_ITEM_COLORS[href] ?? "1";
+    return key;
+  };
 
   const selectedTheme = mounted ? (theme ?? "system") : "system";
 
@@ -339,22 +389,68 @@ export default function AppLayout({ children }) {
                     {section.title}
                   </p>
                   <ul className="space-y-1">
-                    {section.links.map((item) => (
-                      <li key={item.href}>
-                        <Button
-                          as={Link}
-                          href={item.href}
-                          variant="light"
-                          className={`gym-sidebar-link h-auto min-h-8 w-full justify-start gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground/80 hover:bg-default-100 hover:text-foreground ${
-                            pathname === item.href ? "gym-sidebar-link-active bg-primary text-primary-foreground hover:bg-primary-600 hover:text-primary-foreground" : ""
-                          }`}
-                          startContent={<span className="gym-sidebar-icon opacity-50">{item.icon}</span>}
-                          onPress={() => setSidebarOpen(false)}
-                        >
-                          {item.label}
-                        </Button>
-                      </li>
-                    ))}
+                    {section.links.map((item) => {
+                      const isActive = pathname === item.href;
+                      const colorKey = getIconColorKey(item.href);
+                      const isPopoverOpen = contextMenuFor === item.href;
+                      return (
+                        <li key={item.href} className="flex items-center w-full">
+                          <Popover
+                            isOpen={isPopoverOpen}
+                            onOpenChange={(open) => !open && setContextMenuFor(null)}
+                            placement="right-start"
+                            showArrow
+                          >
+                            <PopoverTrigger>
+                              <div
+                                className="w-full"
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setContextMenuFor(item.href);
+                                }}
+                              >
+                                <Button
+                                  as={Link}
+                                  href={item.href}
+                                  variant="light"
+                                  className={`gym-sidebar-link w-full min-w-0 h-auto min-h-8 justify-start gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground/80 hover:bg-default-100 hover:text-foreground ${
+                                    isActive ? "gym-sidebar-link-active bg-default-100 dark:bg-default-200 text-foreground hover:bg-default-200 dark:hover:bg-default-300 hover:text-foreground" : ""
+                                  }`}
+                                  startContent={
+                                    <span
+                                      className="gym-sidebar-icon-wrapper gym-sidebar-icon flex shrink-0 items-center justify-center rounded-md p-0.5 [&_svg]:size-[18px]"
+                                      style={{ backgroundColor: `var(--gym-nav-color-${colorKey})` }}
+                                    >
+                                      {item.icon}
+                                    </span>
+                                  }
+                                  onPress={() => setSidebarOpen(false)}
+                                >
+                                  {item.label}
+                                </Button>
+                              </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-1.5 w-auto">
+                              <div className="grid grid-cols-4 gap-1">
+                                {NAV_COLOR_KEYS.map((key) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => {
+                                      setNavItemColor(item.href, key);
+                                      setContextMenuFor(null);
+                                    }}
+                                    className={`h-[18px] w-[18px] rounded-md border border-transparent transition-transform hover:scale-110 focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1 ${colorKey === key ? "border-primary ring-1 ring-primary ring-offset-1" : ""}`}
+                                    style={{ backgroundColor: `var(--gym-nav-color-${key})` }}
+                                    aria-label={`Color ${key}`}
+                                  />
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}
