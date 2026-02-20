@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
+import EmptyState from "./components/EmptyState";
 import { imageUrl } from "@/lib/image-url";
 import {
   Card,
@@ -494,9 +495,11 @@ export default function AppHome() {
                 <Spinner size="md" color="primary" />
               </div>
             ) : topMembers.length === 0 ? (
-              <p className="py-8 text-center text-sm text-default-600">
-                No members yet. Add your first member to get started.
-              </p>
+              <EmptyState
+                pathname="/app/members"
+                message="No members yet. Add your first member to get started."
+                className="py-8"
+              />
             ) : (
               <ul className="divide-y divide-default-200">
                 {topMembers.map((m) => (

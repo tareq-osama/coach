@@ -49,7 +49,7 @@ export default function NewMemberPage() {
       </div>
       <Card className="max-w-xl">
         <CardHeader className="flex gap-3">
-          <p className="text-default-500">Create a new client profile.</p>
+          <p className="text-default-500">Create a new Member profile.</p>
         </CardHeader>
         <CardBody>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -61,7 +61,7 @@ export default function NewMemberPage() {
             <Input
               label="Name"
               id="name"
-              placeholder="Client name"
+              placeholder="Member name"
               value={form.name}
               onValueChange={(v) => setForm((f) => ({ ...f, name: v }))}
             />

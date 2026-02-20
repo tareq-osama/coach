@@ -26,6 +26,7 @@ import { useGymList } from "../use-gym-list";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
 import { imageUrl } from "@/lib/image-url";
+import EmptyState from "../components/EmptyState";
 
 const ListIcon = () => (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -192,7 +193,7 @@ export default function ExercisesPage() {
               <div className="mt-4">
                 {item.id === "list" ? (
                   exercises.length === 0 ? (
-                    <p className="py-12 text-center text-default-500">No exercises yet.</p>
+                    <EmptyState pathname="/app/exercises" className="py-12" />
                   ) : (
                     <ul className="divide-y divide-default-200">
                       {exercises.map((ex) => (
@@ -233,7 +234,7 @@ export default function ExercisesPage() {
                     </ul>
                   )
                 ) : exercises.length === 0 ? (
-                  <p className="py-12 text-center text-default-500">No exercises yet.</p>
+                  <EmptyState pathname="/app/exercises" className="py-12" />
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {exercises.map((ex) => (

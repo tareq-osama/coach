@@ -21,6 +21,7 @@ import { useGymList } from "../use-gym-list";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
 import { imageUrl } from "@/lib/image-url";
+import EmptyState from "../components/EmptyState";
 
 const COLLECTION_KEY = "meal-plans";
 const PLACEHOLDER_IMG = "https://heroui.com/images/hero-card-complete.jpeg";
@@ -159,8 +160,8 @@ export default function MealPlansPage() {
 
       <Card className="mt-6">
         {plans.length === 0 ? (
-          <CardBody className="py-12 text-center text-default-500">
-            No meal plans yet. Add one to get started.
+          <CardBody>
+            <EmptyState pathname="/app/meal-plans" message="No meal plans yet. Add one to get started." className="py-12" />
           </CardBody>
         ) : (
           <ul className="divide-y divide-default-200">

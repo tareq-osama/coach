@@ -140,7 +140,7 @@ export default function CoachSettingsDialog({ isOpen, onOpenChange, onSaved }) {
           {/* Right: content column with margin + rounded container for the form */}
           <div className="flex-1 flex flex-col min-h-0 bg-default-100 dark:bg-default-50 p-1.5">
             <div className="flex-1 flex flex-col min-h-0 rounded-2xl overflow-hidden bg-default-200 dark:bg-default-100">
-            <ScrollShadow className="flex-1 min-h-0" classNames={{ base: "max-h-[calc(60vh-3.5rem)]" }}>
+            <ScrollShadow className="flex-1 min-h-0 max-h-[calc(60vh-3.5rem)]">
               <div className="p-5">
                 {section === "account" && (
                 <>

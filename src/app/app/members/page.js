@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
+import EmptyState from "../components/EmptyState";
 import { imageUrl } from "@/lib/image-url";
 import {
   Table,
@@ -30,6 +31,13 @@ import {
   CardHeader,
   Image,
   Checkbox,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  addToast,
 } from "@heroui/react";
 
 const ListIcon = () => (
@@ -173,6 +181,8 @@ export default function MembersPage() {
     direction: "ascending",
   });
   const [page, setPage] = useState(1);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -247,12 +257,7 @@ export default function MembersPage() {
     });
   }, [sortDescriptor, items]);
 
-  const onRowsPerPageChange = useCallback((e) => {
-    setRowsPerPage(Number(e.target.value));
-    setPage(1);
-  }, []);
-
-  const onSearchChange = useCallback((value) => {
+const onSearchChange = useCallback((value) => {
     setFilterValue(value ?? "");
     setPage(1);
   }, []);
@@ -328,19 +333,31 @@ export default function MembersPage() {
           <span className="text-small text-default-400">
             Total {filteredItems.length} member{filteredItems.length !== 1 ? "s" : ""}
           </span>
-          <label className="flex items-center gap-2 text-small text-default-400">
+          <div className="flex items-center gap-2 text-small text-default-400">
             Rows per page:
-            <select
-              className="bg-transparent outline-none text-default-500"
-              onChange={onRowsPerPageChange}
-              value={rowsPerPage}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={15}>15</option>
-              <option value={25}>25</option>
-            </select>
-          </label>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button size="sm" variant="flat" endContent={<ChevronDownIcon className="text-small" />} className="min-h-7 h-7">
+                  {rowsPerPage}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Rows per page"
+                selectionMode="single"
+                disallowEmptySelection
+                selectedKeys={new Set([String(rowsPerPage)])}
+                onSelectionChange={(keys) => {
+                  setRowsPerPage(Number(Array.from(keys)[0]));
+                  setPage(1);
+                }}
+              >
+                <DropdownItem key="5">5</DropdownItem>
+                <DropdownItem key="10">10</DropdownItem>
+                <DropdownItem key="15">15</DropdownItem>
+                <DropdownItem key="25">25</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
         </div>
       </div>
     ),
@@ -349,11 +366,39 @@ export default function MembersPage() {
       statusFilter,
       visibleColumns,
       onSearchChange,
-      onRowsPerPageChange,
       filteredItems.length,
       rowsPerPage,
+      page,
     ]
   );
+
+  const selectedCount = selectedKeys === "all" ? sortedItems.length : selectedKeys.size;
+
+  async function handleBulkDelete() {
+    const ids = selectedKeys === "all"
+      ? sortedItems.map((m) => m.$id)
+      : Array.from(selectedKeys);
+    setBulkDeleting(true);
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/gym/members/${id}`, { method: "DELETE", headers: gymApiHeaders(user) })
+        )
+      );
+      setMembers((prev) => prev.filter((m) => !ids.includes(m.$id)));
+      setSelectedKeys(new Set());
+      onDeleteClose();
+      addToast({
+        title: "Deleted",
+        description: `${ids.length} member${ids.length !== 1 ? "s" : ""} deleted.`,
+        color: "success",
+      });
+    } catch (err) {
+      addToast({ title: "Error", description: err.message, color: "danger" });
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
 
   const bottomContent = useMemo(
     () => (
@@ -368,14 +413,26 @@ export default function MembersPage() {
           variant="light"
           onChange={setPage}
         />
-        <span className="text-small text-default-400">
-          {selectedKeys === "all"
-            ? "All items selected"
-            : `${selectedKeys.size} of ${items.length} selected`}
-        </span>
+        <div className="flex items-center gap-3">
+          {selectedCount > 0 && (
+            <Button
+              size="sm"
+              color="danger"
+              variant="flat"
+              onPress={onDeleteOpen}
+            >
+              Delete {selectedCount} selected
+            </Button>
+          )}
+          <span className="text-small text-default-400">
+            {selectedKeys === "all"
+              ? "All items selected"
+              : `${selectedKeys.size} of ${items.length} selected`}
+          </span>
+        </div>
       </div>
     ),
-    [selectedKeys, items.length, page, pages, hasSearchFilter]
+    [selectedKeys, selectedCount, items.length, page, pages, hasSearchFilter, onDeleteOpen]
   );
 
   const isAllListSelected =
@@ -468,10 +525,10 @@ export default function MembersPage() {
               <div className="mt-4">
                 {tab.id === "list" ? (
                   sortedItems.length === 0 ? (
-                    <p className="py-12 text-center text-default-500">No members found.</p>
+                    <EmptyState pathname="/app/members" message="No members found." className="py-12" />
                   ) : (
                     <div className="rounded-lg border border-default-200">
-                      <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3 sm:px-6">
+                      <div className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3 sm:px-6">
                         <Checkbox
                           isSelected={isAllListSelected}
                           onValueChange={toggleSelectAllList}
@@ -500,7 +557,7 @@ export default function MembersPage() {
                         {sortedItems.map((member) => (
                           <li
                             key={member.$id}
-                            className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 px-4 py-3 sm:px-6"
+                            className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 px-4 py-3 sm:px-6"
                           >
                             <Checkbox
                               isSelected={isRowSelected(member.$id)}
@@ -540,10 +597,7 @@ export default function MembersPage() {
                               </Chip>
                             </div>
                             <span className="text-sm text-default-600">{member.phone ?? "—"}</span>
-                            <div className="flex items-center gap-2">
-                              <Button as={Link} href={`/app/members/${member.$id}`} size="sm" variant="flat">
-                                View
-                              </Button>
+                            <div className="flex items-center justify-center gap-2">
                               <Dropdown>
                                 <DropdownTrigger>
                                   <Button isIconOnly radius="full" size="sm" variant="light">
@@ -569,29 +623,67 @@ export default function MembersPage() {
                     </div>
                   )
                 ) : sortedItems.length === 0 ? (
-                  <p className="py-12 text-center text-default-500">No members found.</p>
+                  <EmptyState pathname="/app/members" message="No members found." className="py-12" />
                 ) : (
-                  <div className="gap-2 grid grid-cols-2 sm:grid-cols-4">
-                    {sortedItems.map((member) => (
-                      <Link key={member.$id} href={`/app/members/${member.$id}`} className="block">
-                        <Card isPressable shadow="sm" className="border-none">
-                          <CardBody className="overflow-visible p-0">
-                            <Image
-                              alt={member.name ?? "Member"}
-                              className="w-full object-cover h-[140px]"
-                              radius="lg"
-                              shadow="sm"
-                              src={imageUrl(member.thumbnail) || `${MEMBER_PLACEHOLDER_IMG}${member.$id}`}
-                              width="100%"
-                            />
-                          </CardBody>
-                          <CardFooter className="text-small justify-between">
-                            <b className="truncate">{member.name ?? "—"}</b>
-                            <p className="text-default-500 truncate max-w-[120px] capitalize">{member.status ?? "—"}</p>
-                          </CardFooter>
-                        </Card>
-                      </Link>
-                    ))}
+                  <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-small text-default-500 shrink-0">Sort by:</span>
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button size="sm" variant="flat" endContent={<ChevronDownIcon className="text-small" />} className="min-h-7 h-7 capitalize">
+                          {sortDescriptor.column === "name" ? "Name" : "Status"} · {sortDescriptor.direction === "ascending" ? "Ascending" : "Descending"}
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownMenu
+                        aria-label="Sort options"
+                        selectionMode="single"
+                        disallowEmptySelection
+                        selectedKeys={new Set([`${sortDescriptor.column}-${sortDescriptor.direction}`])}
+                        onSelectionChange={(keys) => {
+                          const [col, dir] = Array.from(keys)[0].split("-");
+                          setSortDescriptor({ column: col, direction: dir });
+                        }}
+                      >
+                        <DropdownItem key="name-ascending">Name · Ascending</DropdownItem>
+                        <DropdownItem key="name-descending">Name · Descending</DropdownItem>
+                        <DropdownItem key="status-ascending">Status · Ascending</DropdownItem>
+                        <DropdownItem key="status-descending">Status · Descending</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    {sortedItems.map((member) => {
+                      const isInactive = member.status === "inactive";
+                      return (
+                        <Link
+                          key={member.$id}
+                          href={isInactive ? "#" : `/app/members/${member.$id}`}
+                          className={`block w-full${isInactive ? " opacity-30 pointer-events-none select-none" : ""}`}
+                          tabIndex={isInactive ? -1 : undefined}
+                          aria-disabled={isInactive}
+                        >
+                          <Card isPressable shadow="sm" className="w-full border-none">
+                            <CardBody className="overflow-hidden p-0">
+                              <div className="relative aspect-square w-full overflow-hidden rounded-t-lg">
+                                <img
+                                  alt={member.name ?? "Member"}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  src={imageUrl(member.thumbnail) || `${MEMBER_PLACEHOLDER_IMG}${member.$id}`}
+                                />
+                                <span
+                                  className={`absolute right-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-white bg-${statusColorMap[member.status ?? "active"] ?? "default"}`}
+                                  title={member.status ?? "active"}
+                                />
+                              </div>
+                            </CardBody>
+                            <CardFooter className="text-small">
+                              <b className="truncate">{member.name ?? "—"}</b>
+                            </CardFooter>
+                          </Card>
+                        </Link>
+                      );
+                    })}
+                  </div>
                   </div>
                 )}
               </div>
@@ -600,6 +692,25 @@ export default function MembersPage() {
         </Tabs>
         {bottomContent}
       </div>
+
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
+        <ModalContent>
+          <ModalHeader>Delete members</ModalHeader>
+          <ModalBody>
+            <p>
+              Permanently delete <strong>{selectedCount} member{selectedCount !== 1 ? "s" : ""}</strong>? This cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onDeleteClose} isDisabled={bulkDeleting}>
+              Cancel
+            </Button>
+            <Button color="danger" onPress={handleBulkDelete} isLoading={bulkDeleting}>
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

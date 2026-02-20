@@ -2,6 +2,7 @@
 
 import { useGymList } from "../use-gym-list";
 import { Card, CardBody, Spinner } from "@heroui/react";
+import EmptyState from "../components/EmptyState";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -44,7 +45,9 @@ export default function MealLogsPage() {
       <p className="mt-2 text-default-500">Track clients’ meal intake.</p>
       <Card className="mt-6">
         {logs.length === 0 ? (
-          <CardBody className="text-center py-12 text-default-500">No meal logs yet.</CardBody>
+          <CardBody>
+            <EmptyState pathname="/app/meal-logs" className="py-12" />
+          </CardBody>
         ) : (
           <ul className="divide-y divide-default-200">
             {logs.map((log) => (

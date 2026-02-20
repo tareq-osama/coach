@@ -24,6 +24,7 @@ import { useGymList } from "../use-gym-list";
 import { useAuth } from "@/app/auth-context";
 import { gymApiHeaders } from "@/lib/gym-client";
 import { imageUrl } from "@/lib/image-url";
+import EmptyState from "../components/EmptyState";
 
 const COLLECTION_KEY = "workout-modules";
 const PLACEHOLDER_IMG = "https://heroui.com/images/hero-card-complete.jpeg";
@@ -162,8 +163,8 @@ export default function WorkoutModulesPage() {
 
       <Card className="mt-6">
         {modules.length === 0 ? (
-          <CardBody className="py-12 text-center text-default-500">
-            No workout modules yet. Add one to get started.
+          <CardBody>
+            <EmptyState pathname="/app/workout-modules" message="No workout modules yet. Add one to get started." className="py-12" />
           </CardBody>
         ) : (
           <ul className="divide-y divide-default-200">

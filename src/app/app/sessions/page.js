@@ -2,6 +2,7 @@
 
 import { useGymList } from "../use-gym-list";
 import { Card, CardBody, Spinner } from "@heroui/react";
+import EmptyState from "../components/EmptyState";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -46,7 +47,9 @@ export default function SessionsPage() {
       <p className="mt-2 text-default-500">Schedule and track training sessions.</p>
       <Card className="mt-6">
         {sessions.length === 0 ? (
-          <CardBody className="text-center py-12 text-default-500">No sessions yet.</CardBody>
+          <CardBody>
+            <EmptyState pathname="/app/sessions" className="py-12" />
+          </CardBody>
         ) : (
           <ul className="divide-y divide-default-200">
             {sessions.map((s) => (

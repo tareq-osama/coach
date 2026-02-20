@@ -91,9 +91,14 @@
   scroll-margin-top: 0.5rem;
 }
 
-/* Active nav item: full opacity icon when using default (no custom color) */
+/* Active nav item: full opacity icon */
 .gym-sidebar-link-active .gym-sidebar-icon {
   opacity: 1;
+}
+
+/* Active nav item hover: slightly stronger tint (uses --active-nav-color set inline) */
+.gym-sidebar-link-active:hover {
+  background-color: color-mix(in srgb, var(--active-nav-color) 22%, transparent) !important;
 }
 
 .gym-main {
