@@ -35,10 +35,12 @@ export default function ThemeColorRow({ label, value, onChange, size = "sm" }) {
   const handleColorChange = useCallback(
     (e) => {
       const hex = e.target.value;
+      const currentHex = toHexForInput(value ?? "#000000");
+      if (hex === currentHex) return;
       setText(hex);
       onChange(hex);
     },
-    [onChange]
+    [value, onChange]
   );
 
   const handleTextChange = useCallback(
