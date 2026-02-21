@@ -11,7 +11,7 @@ export async function GET(request) {
     return NextResponse.json({ error: "APPWRITE_API_KEY is not configured" }, { status: 500 });
   }
   try {
-    const ownerId = getOwnerIdFromRequest(request);
+    const ownerId = await getOwnerIdFromRequest(request);
     const queries = [Query.limit(100), Query.orderDesc("$createdAt")];
     if (ownerId) queries.push(Query.equal("owner_id", ownerId));
     const { documents, total } = await serverDatabases.listDocuments(DB_ID, COLLECTION_ID, queries);
@@ -28,7 +28,7 @@ export async function POST(request) {
   if (!process.env.APPWRITE_API_KEY?.trim()) {
     return NextResponse.json({ error: "APPWRITE_API_KEY is not configured" }, { status: 500 });
   }
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (!ownerId) {
     return NextResponse.json({ error: "X-User-Id header required to create members" }, { status: 400 });
   }

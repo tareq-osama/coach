@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
     );
   }
   try {
-    const ownerId = getOwnerIdFromRequest(request);
+    const ownerId = await getOwnerIdFromRequest(request);
     const { searchParams } = new URL(request.url);
     const filters = [];
     let orderBy = null;
@@ -81,7 +81,7 @@ export async function POST(request, { params }) {
     );
   }
   const isOwnerScoped = OWNER_SCOPED_KEYS.has(collectionKey);
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (isOwnerScoped && !ownerId) {
     return NextResponse.json(
       { error: "X-User-Id header required for this collection" },

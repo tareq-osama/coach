@@ -57,6 +57,7 @@ const MEMBER_PLACEHOLDER_IMG = "https://i.pravatar.cc/300?u=";
 const columns = [
   { name: "NAME", uid: "name", sortable: true },
   { name: "STATUS", uid: "status", sortable: true },
+  { name: "PORTAL", uid: "portal" },
   { name: "PHONE", uid: "phone" },
   { name: "ACTIONS", uid: "actions" },
 ];
@@ -73,7 +74,7 @@ const statusColorMap = {
   vacation: "warning",
 };
 
-const INITIAL_VISIBLE_COLUMNS = ["name", "status", "phone", "actions"];
+const INITIAL_VISIBLE_COLUMNS = ["name", "status", "portal", "phone", "actions"];
 
 const PlusIcon = ({ size = 24, width, height, ...props }) => (
   <svg
@@ -182,8 +183,46 @@ export default function MembersPage() {
   });
   const [page, setPage] = useState(1);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [linkingMember, setLinkingMember] = useState(null);
+  const [linkTempPassword, setLinkTempPassword] = useState(null);
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isLinkOpen, onOpen: onLinkOpen, onClose: onLinkClose } = useDisclosure();
   const { user } = useAuth();
+
+  async function handleLinkPortalAccount(member) {
+    if (!member?.email?.trim()) {
+      addToast({ title: "Email required", description: "Add an email to this member first.", color: "warning" });
+      return;
+    }
+    setLinkingMember(member);
+    setLinkTempPassword(null);
+    try {
+      const res = await fetch("/api/gym/members/invite", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
+        body: JSON.stringify({
+          email: member.email.trim(),
+          name: member.name?.trim(),
+          phone: member.phone?.trim(),
+          memberId: member.$id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error);
+      setMembers((prev) => prev.map((m) => (m.$id === member.$id ? { ...m, user_id: data.member?.user_id ?? m.user_id } : m)));
+      if (data.tempPassword) {
+        setLinkTempPassword(data.tempPassword);
+        onLinkOpen();
+      } else {
+        addToast({ title: "Portal linked", description: "Member can sign in at the portal.", color: "success" });
+      }
+    } catch (err) {
+      addToast({ title: "Link failed", description: err.message, color: "danger" });
+    } finally {
+      setLinkingMember(null);
+    }
+  }
 
   useEffect(() => {
     const url = "/api/gym/members";
@@ -529,7 +568,7 @@ const onSearchChange = useCallback((value) => {
                   ) : (
                     <div className="w-full min-w-0 overflow-x-auto rounded-lg border border-default-200">
                       <div className="min-w-[640px]">
-                      <div className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3">
+                      <div className="grid grid-cols-[auto_1fr_100px_100px_160px_120px] items-center gap-4 border-b border-default-200 bg-default-50/50 px-4 py-3">
                         <Checkbox
                           isSelected={isAllListSelected}
                           onValueChange={toggleSelectAllList}
@@ -551,6 +590,7 @@ const onSearchChange = useCallback((value) => {
                           STATUS
                           <SortIcon column="status" />
                         </button>
+                        <span className="text-small font-medium text-default-500">PORTAL</span>
                         <span className="text-small font-medium text-default-500">PHONE</span>
                         <span className="text-small font-medium text-default-500 text-center">ACTIONS</span>
                       </div>
@@ -558,7 +598,7 @@ const onSearchChange = useCallback((value) => {
                         {sortedItems.map((member) => (
                           <li
                             key={member.$id}
-                            className="grid grid-cols-[auto_1fr_130px_160px_120px] items-center gap-4 px-4 py-3"
+                            className="grid grid-cols-[auto_1fr_100px_100px_160px_120px] items-center gap-4 px-4 py-3"
                           >
                             <Checkbox
                               isSelected={isRowSelected(member.$id)}
@@ -597,11 +637,18 @@ const onSearchChange = useCallback((value) => {
                                 {member.status ?? "active"}
                               </Chip>
                             </div>
+                            <div>
+                              {member.user_id ? (
+                                <Chip size="sm" variant="flat" color="success">Portal active</Chip>
+                              ) : (
+                                <Chip size="sm" variant="flat" color="default">Not activated</Chip>
+                              )}
+                            </div>
                             <span className="text-sm text-default-600">{member.phone ?? "—"}</span>
                             <div className="flex items-center justify-center gap-2">
                               <Dropdown>
                                 <DropdownTrigger>
-                                  <Button isIconOnly radius="full" size="sm" variant="light">
+                                  <Button isIconOnly radius="full" size="sm" variant="light" isDisabled={linkingMember?.$id === member.$id}>
                                     <VerticalDotsIcon className="text-default-400" />
                                   </Button>
                                 </DropdownTrigger>
@@ -612,6 +659,15 @@ const onSearchChange = useCallback((value) => {
                                   <DropdownItem key="edit" as={Link} href={`/app/members/${member.$id}`}>
                                     Edit
                                   </DropdownItem>
+                                  {!member.user_id && (
+                                    <DropdownItem
+                                      key="link"
+                                      onPress={() => handleLinkPortalAccount(member)}
+                                      description="Create portal login for this member"
+                                    >
+                                      Link portal account
+                                    </DropdownItem>
+                                  )}
                                   <DropdownItem key="delete" color="danger">
                                     Delete
                                   </DropdownItem>
@@ -710,6 +766,25 @@ const onSearchChange = useCallback((value) => {
             <Button color="danger" onPress={handleBulkDelete} isLoading={bulkDeleting}>
               Delete
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isLinkOpen} onClose={onLinkClose}>
+        <ModalContent>
+          <ModalHeader>Portal login</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-600">
+              Share this temporary password with the member so they can sign in at the portal.
+            </p>
+            {linkTempPassword && (
+              <div className="rounded-lg bg-default-100 p-3 font-mono text-sm break-all select-all mt-2">
+                {linkTempPassword}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onPress={onLinkClose}>Done</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

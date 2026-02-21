@@ -27,6 +27,18 @@ export default function RegisterPage() {
     try {
       await createAccount(email.trim(), password, name.trim());
       await refresh(); // update auth context so /app layout sees the user
+
+      const res = await fetch("/api/auth/onboard-coach", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Setup failed. Try again.");
+      }
+
       router.replace("/app");
     } catch (err) {
       setError(err?.message ?? "Registration failed. Try a different email or stronger password.");

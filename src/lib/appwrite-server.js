@@ -4,7 +4,7 @@
  * @see https://appwrite.io/docs/server/databases
  * @see https://appwrite.io/docs/products/storage/quick-start
  */
-import { Client, Databases, Storage } from "node-appwrite";
+import { Client, Databases, Storage, Users, Teams } from "node-appwrite";
 
 const serverClient = new Client()
   .setEndpoint(String(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ?? "").trim())
@@ -13,6 +13,8 @@ const serverClient = new Client()
 
 export const serverDatabases = new Databases(serverClient);
 export const serverStorage = new Storage(serverClient);
+export const serverUsers = new Users(serverClient);
+export const serverTeams = new Teams(serverClient);
 
 /** Main storage bucket ID for progress photos and other app files. */
 export const STORAGE_BUCKET_ID =

@@ -1,14 +1,12 @@
 /**
- * Get the current coach (owner) user ID from the request.
- * Client should send X-User-Id header with the authenticated user's $id from useAuth().
+ * Resolve the current coach (owner) ID from the request for DB scope.
+ * owner_id is the coach's team ID (from session + team memberships with owner/coach role).
  * @param {Request} request
- * @returns {string|null} owner ID or null if not provided
+ * @returns {Promise<string|null>} team ID or null
  */
-export function getOwnerIdFromRequest(request) {
-  const header = request.headers.get("x-user-id");
-  if (header && typeof header === "string") {
-    const id = header.trim();
-    if (id.length > 0) return id;
-  }
-  return null;
+import { getSessionWithTeams, getCoachTeamId } from "@/lib/session-teams";
+
+export async function getOwnerIdFromRequest(request) {
+  const { memberships } = await getSessionWithTeams(request);
+  return getCoachTeamId(memberships);
 }

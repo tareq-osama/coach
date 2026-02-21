@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
   }
   try {
     const doc = await serverDatabases.getDocument(DB_ID, COLLECTIONS[collectionKey], id);
-    const ownerId = getOwnerIdFromRequest(request);
+    const ownerId = await getOwnerIdFromRequest(request);
     if (ownerId && OWNER_SCOPED_KEYS.has(collectionKey) && doc.owner_id !== ownerId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -37,7 +37,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: "Collection and document ID required" }, { status: 400 });
   }
   const isOwnerScoped = OWNER_SCOPED_KEYS.has(collectionKey);
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (isOwnerScoped && !ownerId) {
     return NextResponse.json({ error: "X-User-Id header required" }, { status: 400 });
   }
@@ -68,7 +68,7 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: "Collection and document ID required" }, { status: 400 });
   }
   const isOwnerScoped = OWNER_SCOPED_KEYS.has(collectionKey);
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (isOwnerScoped && !ownerId) {
     return NextResponse.json({ error: "X-User-Id header required" }, { status: 400 });
   }

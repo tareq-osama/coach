@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
   if (!id) return NextResponse.json({ error: "Member ID required" }, { status: 400 });
   try {
     const doc = await serverDatabases.getDocument(DB_ID, COLLECTION_ID, id);
-    const ownerId = getOwnerIdFromRequest(request);
+    const ownerId = await getOwnerIdFromRequest(request);
     if (ownerId && doc.owner_id !== ownerId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -32,7 +32,7 @@ export async function PATCH(request, { params }) {
   }
   const id = params?.id;
   if (!id) return NextResponse.json({ error: "Member ID required" }, { status: 400 });
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (!ownerId) {
     return NextResponse.json({ error: "X-User-Id header required" }, { status: 400 });
   }
@@ -91,7 +91,7 @@ export async function DELETE(request, { params }) {
   }
   const id = params?.id;
   if (!id) return NextResponse.json({ error: "Member ID required" }, { status: 400 });
-  const ownerId = getOwnerIdFromRequest(request);
+  const ownerId = await getOwnerIdFromRequest(request);
   if (!ownerId) {
     return NextResponse.json({ error: "X-User-Id header required" }, { status: 400 });
   }

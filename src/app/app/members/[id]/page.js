@@ -68,6 +68,12 @@ export default function MemberDetailPage() {
   const [mealPlanIds, setMealPlanIds] = useState(new Set());
   const [savingPlans, setSavingPlans] = useState(false);
   const [plansError, setPlansError] = useState(null);
+  const [linkingPortal, setLinkingPortal] = useState(false);
+  const [linkTempPassword, setLinkTempPassword] = useState(null);
+  const { isOpen: isLinkOpen, onOpen: onLinkOpen, onClose: onLinkClose } = useDisclosure();
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetTempPassword, setResetTempPassword] = useState(null);
+  const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
 
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
@@ -246,6 +252,63 @@ export default function MemberDetailPage() {
     }
   }
 
+  async function handleLinkPortalAccount() {
+    if (!member?.email?.trim()) {
+      addToast({ title: "Email required", description: "Add an email to this member first.", color: "warning" });
+      return;
+    }
+    setLinkingPortal(true);
+    setLinkTempPassword(null);
+    try {
+      const res = await fetch("/api/gym/members/invite", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
+        body: JSON.stringify({
+          email: member.email.trim(),
+          name: member.name?.trim(),
+          phone: member.phone?.trim(),
+          memberId: member.$id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error);
+      setMember((prev) => (prev ? { ...prev, user_id: data.member?.user_id ?? prev.user_id } : prev));
+      if (data.tempPassword) {
+        setLinkTempPassword(data.tempPassword);
+        onLinkOpen();
+      } else {
+        addToast({ title: "Portal linked", description: "Member can sign in at the portal.", color: "success" });
+      }
+    } catch (err) {
+      addToast({ title: "Link failed", description: err.message, color: "danger" });
+    } finally {
+      setLinkingPortal(false);
+    }
+  }
+
+  async function handleResetPortalPassword() {
+    if (!member?.$id || !member?.user_id) return;
+    setResettingPassword(true);
+    setResetTempPassword(null);
+    try {
+      const res = await fetch("/api/gym/members/reset-password", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...gymApiHeaders(user) },
+        body: JSON.stringify({ memberId: member.$id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.details);
+      setResetTempPassword(data.tempPassword ?? null);
+      onResetOpen();
+    } catch (err) {
+      addToast({ title: "Reset failed", description: err.message, color: "danger" });
+    } finally {
+      setResettingPassword(false);
+    }
+  }
+
   async function handleDelete() {
     setDeleteError(null);
     setSaving(true);
@@ -314,6 +377,42 @@ export default function MemberDetailPage() {
       <Tabs aria-label="Member sections" className="w-full">
         <Tab key="details" title="Details">
           <div className="space-y-4 pt-2">
+            {/* Portal status */}
+            <Card shadow="sm" className="border-none">
+              <CardBody className="gap-3">
+                <p className="text-sm font-medium text-foreground">Portal access</p>
+                {member.user_id ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-success-600 dark:text-success-400">Portal account is active. Member can sign in at the portal.</p>
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="default"
+                      onPress={handleResetPortalPassword}
+                      isDisabled={resettingPassword}
+                      isLoading={resettingPassword}
+                    >
+                      Reset portal password
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-default-500">Not yet linked. Link this member to a portal account so they can sign in.</p>
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="flat"
+                      onPress={handleLinkPortalAccount}
+                      isDisabled={linkingPortal || !member.email?.trim()}
+                      isLoading={linkingPortal}
+                    >
+                      Link portal account
+                    </Button>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
             {/* Member details */}
             <Card shadow="sm" className="border-none">
               <CardBody className="gap-4">
@@ -532,6 +631,44 @@ export default function MemberDetailPage() {
             <Button color="danger" onPress={handleDelete} isLoading={saving}>
               Delete
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isLinkOpen} onClose={onLinkClose}>
+        <ModalContent>
+          <ModalHeader>Portal login</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-600">
+              Share this temporary password with the member so they can sign in at the portal.
+            </p>
+            {linkTempPassword && (
+              <div className="rounded-lg bg-default-100 p-3 font-mono text-sm break-all select-all mt-2">
+                {linkTempPassword}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onPress={onLinkClose}>Done</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isResetOpen} onClose={onResetClose}>
+        <ModalContent>
+          <ModalHeader>New portal password</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-600">
+              Share this new temporary password with the member. They can use it to sign in at the portal and change it there.
+            </p>
+            {resetTempPassword && (
+              <div className="rounded-lg bg-default-100 p-3 font-mono text-sm break-all select-all mt-2">
+                {resetTempPassword}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onPress={onResetClose}>Done</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
