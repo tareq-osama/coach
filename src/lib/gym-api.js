@@ -33,6 +33,7 @@ export const OWNER_SCOPED_KEYS = new Set([
   "meal-plans",
   "sessions",
   "meal-logs",
+  "progress-photos",
 ]);
 
 export async function listGymDocuments(collectionKey, options = {}) {

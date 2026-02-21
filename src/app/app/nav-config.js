@@ -38,6 +38,12 @@ export const NAV_SECTIONS = [
       { href: "/app/reports", label: "Reports", iconKey: "chart" },
     ],
   },
+  {
+    title: "Admin",
+    links: [
+      { href: "/app/settings", label: "Settings", iconKey: "cog" },
+    ],
+  },
 ];
 
 const allLinks = NAV_SECTIONS.flatMap((s) => s.links);

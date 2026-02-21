@@ -3,6 +3,91 @@
   font-family: inherit;
 }
 
+/* Sidebar: dark mode only – #000d21 palette (theme: bg-sidebar, border-sidebar-200); light mode uses default theme */
+.dark {
+  --gym-sidebar-bg: #000d21;
+  --gym-sidebar-border: #0f2847;
+  --gym-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --gym-sidebar-text: #e2e8f0;
+  --gym-sidebar-text-muted: #94a3b8;
+  --gym-sidebar-active-bg: rgba(255, 255, 255, 0.1);
+}
+.dark .gym-sidebar .gym-sidebar-header {
+  color: var(--gym-sidebar-text-muted);
+}
+.dark .gym-sidebar [data-slot="base"] {
+  color: var(--gym-sidebar-text);
+}
+.dark .gym-sidebar a:hover,
+.dark .gym-sidebar button[data-hover]:hover {
+  background: var(--gym-sidebar-hover) !important;
+}
+.dark .gym-sidebar .gym-sidebar-link {
+  color: var(--gym-sidebar-text-muted) !important;
+}
+.dark .gym-sidebar .gym-sidebar-link:hover {
+  color: var(--gym-sidebar-text) !important;
+}
+.dark .gym-sidebar .gym-sidebar-link-active {
+  color: var(--gym-sidebar-text) !important;
+  background: var(--gym-sidebar-active-bg) !important;
+}
+.dark .gym-sidebar .gym-sidebar-link-active:hover {
+  background: color-mix(in srgb, var(--gym-sidebar-active-bg) 90%, var(--gym-sidebar-hover)) !important;
+  color: var(--gym-sidebar-text) !important;
+}
+.dark .gym-sidebar a[href="/app"] {
+  color: var(--gym-sidebar-text) !important;
+}
+.dark .gym-sidebar button[aria-label="Close menu"] {
+  color: var(--gym-sidebar-text);
+}
+.dark .gym-sidebar button[aria-label="Close menu"]:hover {
+  background: var(--gym-sidebar-hover) !important;
+  color: var(--gym-sidebar-text);
+}
+.dark .gym-sidebar [aria-label="Coach menu"] {
+  color: var(--gym-sidebar-text);
+}
+.dark .gym-sidebar [aria-label="Coach menu"] .text-default-500 {
+  color: var(--gym-sidebar-text-muted) !important;
+}
+/* Dark sidebar: always show light logo */
+.dark .gym-sidebar a[href="/app"] .dark\:hidden {
+  display: none !important;
+}
+.dark .gym-sidebar a[href="/app"] .hidden.dark\:block {
+  display: block !important;
+}
+
+/* Main app area: background image */
+.gym-main {
+  background-image: url("/background.webp");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  position: relative;
+}
+.gym-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%);
+  pointer-events: none;
+}
+.dark .gym-main::before {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 100%);
+}
+.gym-main > * {
+  position: relative;
+  z-index: 1;
+}
+@media (min-width: 1024px) {
+  .gym-main {
+    padding-left: calc(0.5rem + var(--gym-sidebar-width, 256px));
+  }
+}
+
 /* Nav icon color palette – use these variables to tune for light/dark (HeroUI-like vibrance) */
 :root {
   --gym-nav-color-1: #006fee;   /* primary */
@@ -42,16 +127,45 @@
   --gym-nav-color-16: #94a3b8;
 }
 
-/* Sidebar scroll: scrollbar only on hover */
+/* Sidebar scroll: thin, transparent by default */
 .gym-sidebar .gym-sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
+/* Light sidebar: scrollbar on hover uses default theme tones */
 .gym-sidebar .gym-sidebar-scroll:hover {
   scrollbar-color: #a1a1aa #e4e4e7;
 }
+.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-track {
+  background: #e4e4e7;
+}
+.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: #a1a1aa;
+}
+.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
+/* Dark sidebar: scrollbar on hover uses #000d21 palette */
 .dark .gym-sidebar .gym-sidebar-scroll:hover {
-  scrollbar-color: #52525b #27272a;
+  scrollbar-color: var(--gym-sidebar-border) var(--gym-sidebar-bg);
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-track {
+  background: var(--gym-sidebar-bg);
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--gym-sidebar-border);
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: #1a3a5c;
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-track {
+  background: var(--gym-sidebar-bg);
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--gym-sidebar-border);
+}
+.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: #1a3a5c;
 }
 /* WebKit: hide by default */
 .gym-sidebar .gym-sidebar-scroll::-webkit-scrollbar,
@@ -67,25 +181,6 @@
   background: transparent;
   border-radius: 3px;
 }
-/* WebKit: show on hover */
-.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-track {
-  background: #e4e4e7;
-}
-.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: #a1a1aa;
-}
-.gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
-}
-.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-track {
-  background: #27272a;
-}
-.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: #52525b;
-}
-.dark .gym-sidebar .gym-sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
-}
 
 .gym-sidebar-section {
   scroll-margin-top: 0.5rem;
@@ -94,11 +189,6 @@
 /* Active nav item: full opacity icon */
 .gym-sidebar-link-active .gym-sidebar-icon {
   opacity: 1;
-}
-
-/* Active nav item hover: slightly stronger tint (uses --active-nav-color set inline) */
-.gym-sidebar-link-active:hover {
-  background-color: color-mix(in srgb, var(--active-nav-color) 22%, transparent) !important;
 }
 
 .gym-main {

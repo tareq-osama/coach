@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionWithTeams, getCoachTeamId } from "@/lib/session-teams";
+import { getSessionWithTeams, getCoachTeamId, hasPulseAdmin } from "@/lib/session-teams";
 import AppLayoutClient from "./AppLayoutClient";
 
 export default async function AppLayout({ children }) {
@@ -15,5 +15,6 @@ export default async function AppLayout({ children }) {
     redirect("/complete-setup");
   }
 
-  return <AppLayoutClient>{children}</AppLayoutClient>;
+  const isPulseAdmin = hasPulseAdmin(memberships);
+  return <AppLayoutClient isPulseAdmin={isPulseAdmin}>{children}</AppLayoutClient>;
 }

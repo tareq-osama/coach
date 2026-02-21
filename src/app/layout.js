@@ -17,7 +17,7 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:opsz,wght@14..32,100..900&family=Poppins:wght@300;400&display=swap"
           rel="stylesheet"
         />
-        <link rel="icon" type="image/svg+xml" href="/appwrite.svg" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground font-[Inter] text-sm" suppressHydrationWarning>
     <Providers>{children}</Providers>

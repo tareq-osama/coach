@@ -96,9 +96,9 @@ export default function MemberPageHeader({
           </Badge>
         </div>
 
-        {/* Breadcrumbs */}
+        {/* Breadcrumbs — use href only; BreadcrumbItem renders a link, so do not pass as={Link} (avoids nested <a>) */}
         <Breadcrumbs className="mb-3" size="sm">
-          <BreadcrumbItem startContent={<HomeIcon />} href="/app" as={Link}>
+          <BreadcrumbItem startContent={<HomeIcon />} href="/app">
             Home
           </BreadcrumbItem>
           {breadcrumbs.slice(0, -1).map((crumb) => (

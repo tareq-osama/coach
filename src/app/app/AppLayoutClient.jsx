@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { Button, Spinner, ScrollShadow, Avatar, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from "@heroicons/react/24/solid";
@@ -11,6 +11,7 @@ import { imageUrl } from "@/lib/image-url";
 import { NAV_SECTIONS } from "./nav-config";
 import { getSidebarIcons } from "./sidebar-icons";
 import CoachSettingsDialog from "./components/CoachSettingsDialog";
+import ThemeInjector from "./components/ThemeInjector";
 import "./app.css";
 
 const icons = getSidebarIcons();
@@ -20,6 +21,10 @@ const navSections = NAV_SECTIONS.map((section) => ({
 }));
 
 const NAV_ITEM_COLORS_KEY = "gym-nav-item-colors";
+const SIDEBAR_WIDTH_KEY = "gym-sidebar-width";
+const SIDEBAR_WIDTH_MIN = 200;
+const SIDEBAR_WIDTH_MAX = 420;
+const SIDEBAR_WIDTH_DEFAULT = 256;
 const NAV_COLOR_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"];
 
 const DEFAULT_NAV_ITEM_COLORS = {
@@ -40,7 +45,7 @@ const DEFAULT_NAV_ITEM_COLORS = {
   "/app/inbox": "3",
 };
 
-export default function AppLayoutClient({ children }) {
+export default function AppLayoutClient({ children, isPulseAdmin = false }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout } = useAuth();
@@ -51,7 +56,25 @@ export default function AppLayoutClient({ children }) {
   const [mounted, setMounted] = useState(false);
   const [navItemColors, setNavItemColors] = useState({});
   const [contextMenuFor, setContextMenuFor] = useState(null);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef({ x: 0, w: 0 });
+  const isResizingRef = useRef(false);
+  const sidebarWidthRef = useRef(sidebarWidth);
+  sidebarWidthRef.current = sidebarWidth;
   useEffect(() => setMounted(true), []);
+
+  /* On desktop (lg), start sidebar hidden and animate in after mount so the transition is visible */
+  useEffect(() => {
+    const isLg = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+    if (!isLg) return;
+    const timer = setTimeout(() => setSidebarOpen(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const closeSidebarIfMobile = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) setSidebarOpen(false);
+  };
 
   useEffect(() => {
     if (!mounted) return;
@@ -62,7 +85,49 @@ export default function AppLayoutClient({ children }) {
         if (parsed && typeof parsed === "object") setNavItemColors(parsed);
       }
     } catch (_) {}
+    try {
+      const w = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+      if (w != null) {
+        const n = parseInt(w, 10);
+        if (!Number.isNaN(n) && n >= SIDEBAR_WIDTH_MIN && n <= SIDEBAR_WIDTH_MAX) setSidebarWidth(n);
+      }
+    } catch (_) {}
   }, [mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    document.documentElement.style.setProperty("--gym-sidebar-width", `${sidebarWidth}px`);
+  }, [mounted, sidebarWidth]);
+
+  const handleResizeStart = (e) => {
+    e.preventDefault();
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    isResizingRef.current = true;
+    setIsResizing(true);
+    resizeStartRef.current = { x: e.clientX, w: sidebarWidth };
+    document.body.classList.add("select-none");
+  };
+
+  const handleResizeMove = (e) => {
+    if (!isResizingRef.current) return;
+    const start = resizeStartRef.current;
+    const delta = e.clientX - start.x;
+    const next = Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, start.w + delta));
+    sidebarWidthRef.current = next;
+    setSidebarWidth(next);
+  };
+
+  const handleResizeEnd = (e) => {
+    if (e.pointerId !== undefined) e.currentTarget.releasePointerCapture?.(e.pointerId);
+    isResizingRef.current = false;
+    setIsResizing(false);
+    resizeStartRef.current = { x: 0, w: 0 };
+    document.body.classList.remove("select-none");
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidthRef.current));
+    } catch (_) {}
+  };
 
   const setNavItemColor = (href, colorKey) => {
     setNavItemColors((prev) => {
@@ -93,15 +158,7 @@ export default function AppLayoutClient({ children }) {
     router.replace("/login");
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-default-100 dark:bg-default-50">
-        <Spinner size="lg" color="primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
+  if (!loading && !user) {
     return null;
   }
 
@@ -125,20 +182,31 @@ export default function AppLayoutClient({ children }) {
         onSaved={() => {}}
       />
 
+      <ThemeInjector />
       <aside
-        className={`gym-sidebar fixed left-0 top-0 z-40 flex h-screen w-64 flex-col transform overflow-hidden border-r border-default-200 bg-default-200 dark:bg-default-100 transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`gym-sidebar fixed left-2 top-2 bottom-2 z-40 flex flex-col overflow-hidden rounded-2xl bg-default-200 dark:bg-sidebar ${
+          sidebarOpen
+            ? "translate-x-0 opacity-100 transition-all duration-300 ease-in-out"
+            : "-translate-x-full opacity-0"
+        } ${isResizing ? "transition-none" : ""}`}
+        style={{ width: sidebarWidth }}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-default-200 px-4">
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 z-0 h-[min(70%,320px)] w-[min(100%,320px)] bg-left-bottom bg-no-repeat bg-[length:auto_100%] opacity-90"
+          style={{ backgroundImage: 'url("/sidebar-flare.png")' }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex h-14 shrink-0 items-center justify-between mt-3 px-4">
           <Button
             as={Link}
             href="/app"
             variant="light"
-            className="h-auto px-2 py-1.5 text-base font-semibold text-foreground hover:bg-default-100"
-            onPress={() => setSidebarOpen(false)}
+            className="h-auto min-w-0 px-2 py-1.5 text-foreground hover:bg-default-100"
+            onPress={closeSidebarIfMobile}
           >
-            Pulse®
+            <img src="/logo.svg" alt="Pulse" className="dark:hidden h-8 w-auto" />
+            <img src="/logo-darkmode.svg" alt="Pulse" className="hidden dark:block h-8 w-auto" />
           </Button>
           <Button
             isIconOnly
@@ -153,14 +221,16 @@ export default function AppLayoutClient({ children }) {
           </Button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
           <ScrollShadow
             hideScrollBar
             size={60}
             className="gym-sidebar-scroll min-h-0 flex-1 overflow-y-auto"
           >
             <nav className="flex flex-col gap-6 px-3 pb-4 pt-2">
-              {navSections.map((section, idx) => (
+              {navSections
+                .filter((section) => section.title !== "Admin" || isPulseAdmin)
+                .map((section, idx) => (
                 <div key={section.title ?? idx} className="gym-sidebar-section">
                   {section.title && (
                     <p className="gym-sidebar-header mb-1.5 px-3 py-0 text-xs font-semibold tracking-wider text-default-600">
@@ -208,7 +278,7 @@ export default function AppLayoutClient({ children }) {
                                       {item.icon}
                                     </span>
                                   }
-                                  onPress={() => setSidebarOpen(false)}
+                                  onPress={closeSidebarIfMobile}
                                 >
                                   {item.label}
                                 </Button>
@@ -241,7 +311,7 @@ export default function AppLayoutClient({ children }) {
             </nav>
           </ScrollShadow>
         </div>
-        <div className="shrink-0 border-t border-default-200 p-3">
+        <div className="shrink-0 border-t border-default-200 dark:border-sidebar-200 p-3">
           <Popover placement="right-start" isOpen={popoverOpen} onOpenChange={setPopoverOpen} showArrow>
             <PopoverTrigger>
               <Button
@@ -345,10 +415,29 @@ export default function AppLayoutClient({ children }) {
             </PopoverContent>
           </Popover>
         </div>
+
+        <div
+          role="separator"
+          aria-label="Resize sidebar"
+          tabIndex={0}
+          className="absolute right-0 top-0 bottom-0 z-20 w-1.5 cursor-col-resize touch-none rounded-r shrink-0 bg-transparent hover:bg-default-400/50 active:bg-default-500/70 lg:block hidden"
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={handleResizeEnd}
+          onPointerCancel={handleResizeEnd}
+        />
       </aside>
 
-      <main className="gym-main min-h-screen flex-1 min-w-0 py-8 lg:pl-64">
-        <div className="mx-auto max-w-6xl px-4">{children}</div>
+      <main className="gym-main min-h-screen flex-1 min-w-0 py-8">
+        <div className="mx-auto max-w-6xl px-4">
+          {loading ? (
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <Spinner size="lg" color="primary" />
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </main>
 
       {sidebarOpen && (

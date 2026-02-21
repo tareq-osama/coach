@@ -140,3 +140,16 @@ export function getClientTeamIds(memberships) {
     .map((mem) => mem.teamId)
     .filter(Boolean);
 }
+
+/** Team ID for Pulse app admins (settings, theming, etc.) */
+export const PULSE_ADMIN_TEAM_ID = "pulse-admin";
+
+/**
+ * Check if user is in the Pulse Admins team (can access Settings, theme, etc.).
+ * @param {import("node-appwrite").Models.Membership[]} memberships
+ * @returns {boolean}
+ */
+export function hasPulseAdmin(memberships) {
+  if (!Array.isArray(memberships)) return false;
+  return memberships.some((mem) => mem.teamId === PULSE_ADMIN_TEAM_ID);
+}
