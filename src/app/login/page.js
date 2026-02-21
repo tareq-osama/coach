@@ -46,7 +46,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-default-100 px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col gap-1 px-6 pt-6 pb-0">
-          <h1 className="text-2xl font-semibold text-foreground">Gym Coach</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Pulse®</h1>
           <p className="text-sm text-default-500">Sign in to your account</p>
         </CardHeader>
         <CardBody className="gap-4 px-6 pb-6 pt-4">

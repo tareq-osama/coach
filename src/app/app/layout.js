@@ -142,7 +142,7 @@ export default function AppLayout({ children }) {
             className="h-auto px-2 py-1.5 text-base font-semibold text-foreground hover:bg-default-100"
             onPress={() => setSidebarOpen(false)}
           >
-            Gym Coach
+            Pulse®
           </Button>
           <Button
             isIconOnly

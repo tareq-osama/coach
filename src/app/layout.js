@@ -2,8 +2,8 @@ import { Providers } from "./providers";
 import "./app.css";
 
 export const metadata = {
-  title: "Appwrite + Next.js",
-  description: "Appwrite starter for Next.js",
+  title: "Pulse®",
+  description: "Pulse® — gym coaching platform",
 };
 
 export default function RootLayout({ children }) {
@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/svg+xml" href="/appwrite.svg" />
       </head>
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground font-[Inter] text-sm" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+    <Providers>{children}</Providers>
       </body>
     </html>
   );
