@@ -12,7 +12,7 @@ import {
   Accordion,
   AccordionItem,
 } from "@heroui/react";
-import { ArrowPathIcon, CheckIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon, CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/solid";
 import {
   DEFAULT_THEME,
   deepMergeTheme,
@@ -50,6 +50,7 @@ export default function ThemingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +73,30 @@ export default function ThemingPage() {
   const update = useCallback((mode, path, value) => {
     setTheme((t) => setByPath(t, [mode, "colors", ...path], value));
   }, []);
+
+  // Instant preview: apply current theme to app when theme state changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("pulse-theme-updated", { detail: theme }));
+  }, [theme]);
+
+  /** Format current theme as the object to paste into tailwind.config.js (heroui themes) */
+  const getThemeConfigSnippet = useCallback(() => {
+    const themesBlock = {
+      light: theme.light,
+      dark: theme.dark,
+    };
+    return `themes: ${JSON.stringify(themesBlock, null, 2).replace(/^/m, "      ")}`;
+  }, [theme]);
+
+  const handleCopyConfig = useCallback(async () => {
+    const snippet = getThemeConfigSnippet();
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) {}
+  }, [getThemeConfigSnippet]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -216,7 +241,15 @@ export default function ThemingPage() {
               All theme variables in a hierarchy. Light and dark modes, scale grades, and semantic tokens.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="flat"
+              size="sm"
+              onPress={handleCopyConfig}
+              startContent={copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+            >
+              {copied ? "Copied!" : "Copy for tailwind.config.js"}
+            </Button>
             <Button
               variant="flat"
               size="sm"
