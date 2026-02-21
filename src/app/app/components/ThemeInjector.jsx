@@ -94,6 +94,11 @@ function applyTheme(theme) {
   const focus = colors?.focus ?? theme.focus;
   if (primary) root.style.setProperty("--gym-primary", primary);
   if (focus) root.style.setProperty("--gym-focus", focus);
+  if (theme.backgroundImageUrl && theme.backgroundImageUrl.trim()) {
+    root.style.setProperty("--gym-main-bg-image", `url(${theme.backgroundImageUrl.trim()})`);
+  } else {
+    root.style.removeProperty("--gym-main-bg-image");
+  }
   if (isDark && theme.dark?.colors?.sidebar) {
     const s = theme.dark.colors.sidebar;
     if (s.DEFAULT) root.style.setProperty("--gym-sidebar-bg", s.DEFAULT);

@@ -116,5 +116,6 @@ export function deepMergeTheme(defaults, overrides) {
   }
   if (overrides.light?.colors) assign(out.light.colors, overrides.light.colors);
   if (overrides.dark?.colors) assign(out.dark.colors, overrides.dark.colors);
+  if (overrides.backgroundImageUrl !== undefined) out.backgroundImageUrl = overrides.backgroundImageUrl ?? "";
   return out;
 }

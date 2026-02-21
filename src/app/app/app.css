@@ -60,9 +60,9 @@
   display: block !important;
 }
 
-/* Main app area: background image */
+/* Main app area: background image (overridable via --gym-main-bg-image from ThemeInjector) */
 .gym-main {
-  background-image: url("/background.webp");
+  background-image: var(--gym-main-bg-image, url("/background.webp"));
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

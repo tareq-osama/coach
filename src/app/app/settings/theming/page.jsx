@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   CardBody,
@@ -22,6 +22,7 @@ import {
   SEMANTIC_SIMPLE,
 } from "./theme-defaults";
 import ThemeColorRow from "./ThemeColorRow";
+import ImageUploader from "../../components/ImageUploader";
 
 function setByPath(obj, path, value) {
   const root = { ...obj };
@@ -51,6 +52,8 @@ export default function ThemingPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
 
   useEffect(() => {
     let cancelled = false;
@@ -80,23 +83,53 @@ export default function ThemingPage() {
     window.dispatchEvent(new CustomEvent("pulse-theme-updated", { detail: theme }));
   }, [theme]);
 
-  /** Format current theme as the object to paste into tailwind.config.js (heroui themes) */
-  const getThemeConfigSnippet = useCallback(() => {
-    const themesBlock = {
-      light: theme.light,
-      dark: theme.dark,
-    };
-    return `themes: ${JSON.stringify(themesBlock, null, 2).replace(/^/m, "      ")}`;
-  }, [theme]);
-
+  /** Copy full tailwind.config.js (at click time) with current theme embedded */
   const handleCopyConfig = useCallback(async () => {
-    const snippet = getThemeConfigSnippet();
+    const current = themeRef.current;
+    if (!current?.light?.colors && !current?.dark?.colors) return;
+    const themesBlock = {
+      light: JSON.parse(JSON.stringify(current.light)),
+      dark: JSON.parse(JSON.stringify(current.dark)),
+    };
+    const themesStr = JSON.stringify(themesBlock, null, 2);
+    const lines = themesStr.split("\n");
+    const innerLines = lines.slice(1, lines.length - 1);
+    const themesBody = innerLines.map((line) => "        " + line).join("\n");
+    const fullConfig = `const { heroui } = require("@heroui/theme");
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  darkMode: "class",
+  plugins: [
+    heroui({
+      themes: {
+${themesBody}
+      },
+      layout: {
+        disabledOpacity: "0.5",
+        boxShadow: {
+          small: "none",
+          medium: "none",
+          large: "none",
+        },
+      },
+    }),
+  ],
+};
+`;
     try {
-      await navigator.clipboard.writeText(snippet);
+      await navigator.clipboard.writeText(fullConfig);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (_) {}
-  }, [getThemeConfigSnippet]);
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -121,7 +154,7 @@ export default function ThemingPage() {
   };
 
   const handleReset = () => {
-    setTheme(deepMergeTheme(DEFAULT_THEME, {}));
+    setTheme({ ...deepMergeTheme(DEFAULT_THEME, {}), backgroundImageUrl: "" });
   };
 
   if (loading) {
@@ -248,7 +281,7 @@ export default function ThemingPage() {
               onPress={handleCopyConfig}
               startContent={copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
             >
-              {copied ? "Copied!" : "Copy for tailwind.config.js"}
+              {copied ? "Copied!" : "Copy full tailwind.config.js"}
             </Button>
             <Button
               variant="flat"
@@ -269,6 +302,23 @@ export default function ThemingPage() {
             </Button>
           </div>
         </CardHeader>
+      </Card>
+
+      <Card className="border border-default-200">
+        <CardHeader className="pb-2">
+          <span className="text-sm font-medium text-foreground">Background image</span>
+          <span className="text-xs text-default-500">Main app area behind content. Upload to R2 or remove to use default.</span>
+        </CardHeader>
+        <CardBody className="pt-0">
+          <ImageUploader
+            label=""
+            variant="field"
+            prefix="backgrounds"
+            value={theme.backgroundImageUrl ?? ""}
+            onValueChange={(url) => setTheme((t) => ({ ...t, backgroundImageUrl: url ?? "" }))}
+            className="max-w-md"
+          />
+        </CardBody>
       </Card>
 
       <Tabs aria-label="Theme mode" variant="underlined">
