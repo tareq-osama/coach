@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardBody, CardHeader, Button, Input, Spinner } from "@heroui/react";
@@ -9,7 +9,7 @@ import { createEmailPasswordSession } from "@/lib/appwrite-auth";
 
 const AUTH_LOAD_TIMEOUT_MS = 3000;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, refresh } = useAuth();
@@ -114,5 +114,19 @@ export default function LoginPage() {
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-default-100">
+          <Spinner size="lg" color="primary" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
