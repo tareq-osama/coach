@@ -35,7 +35,7 @@ export default function PortalDashboardPage() {
   }
 
   async function handleChangePassword(e) {
-    e?.preventDefault();
+    if (typeof e?.preventDefault === "function") e.preventDefault();
     setPasswordError("");
     if (!currentPassword.trim()) {
       setPasswordError("Enter your current (temporary) password.");
