@@ -154,7 +154,12 @@ ${themesBody}
   };
 
   const handleReset = () => {
-    setTheme({ ...deepMergeTheme(DEFAULT_THEME, {}), backgroundImageUrl: "" });
+    setTheme({
+      ...deepMergeTheme(DEFAULT_THEME, {}),
+      backgroundImageUrl: "",
+      backgroundMode: "image",
+      backgroundSolidColor: "#f4f4f5",
+    });
   };
 
   if (loading) {
@@ -306,18 +311,47 @@ ${themesBody}
 
       <Card className="border border-default-200">
         <CardHeader className="pb-2">
-          <span className="text-sm font-medium text-foreground">Background image</span>
-          <span className="text-xs text-default-500">Main app area behind content. Upload to R2 or remove to use default.</span>
+          <span className="text-sm font-medium text-foreground">Main area background</span>
         </CardHeader>
-        <CardBody className="pt-0">
-          <ImageUploader
-            label=""
-            variant="field"
-            prefix="backgrounds"
-            value={theme.backgroundImageUrl ?? ""}
-            onValueChange={(url) => setTheme((t) => ({ ...t, backgroundImageUrl: url ?? "" }))}
-            className="max-w-md"
-          />
+        <CardBody className="pt-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="backgroundMode"
+                checked={theme.backgroundMode === "image"}
+                onChange={() => setTheme((t) => ({ ...t, backgroundMode: "image" }))}
+                className="h-4 w-4 border-default-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-foreground">Image background</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="backgroundMode"
+                checked={theme.backgroundMode === "solid"}
+                onChange={() => setTheme((t) => ({ ...t, backgroundMode: "solid" }))}
+                className="h-4 w-4 border-default-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-foreground">Solid color</span>
+            </label>
+          </div>
+          {theme.backgroundMode === "solid" ? (
+            <ThemeColorRow
+              label="Color"
+              value={theme.backgroundSolidColor ?? "#f4f4f5"}
+              onChange={(hex) => setTheme((t) => ({ ...t, backgroundSolidColor: hex ?? "#f4f4f5" }))}
+            />
+          ) : (
+            <ImageUploader
+              label=""
+              variant="field"
+              prefix="backgrounds"
+              value={theme.backgroundImageUrl ?? ""}
+              onValueChange={(url) => setTheme((t) => ({ ...t, backgroundImageUrl: url ?? "" }))}
+              className="max-w-md"
+            />
+          )}
         </CardBody>
       </Card>
 

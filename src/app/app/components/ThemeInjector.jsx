@@ -94,10 +94,20 @@ function applyTheme(theme) {
   const focus = colors?.focus ?? theme.focus;
   if (primary) root.style.setProperty("--gym-primary", primary);
   if (focus) root.style.setProperty("--gym-focus", focus);
-  if (theme.backgroundImageUrl && theme.backgroundImageUrl.trim()) {
-    root.style.setProperty("--gym-main-bg-image", `url(${theme.backgroundImageUrl.trim()})`);
+  const bgMode = theme.backgroundMode === "solid" ? "solid" : "image";
+  if (bgMode === "solid") {
+    const color = theme.backgroundSolidColor?.trim() || "#f4f4f5";
+    root.style.setProperty("--gym-main-bg-color", color);
+    root.style.setProperty("--gym-main-bg-image", "none");
+    root.style.setProperty("--gym-main-bg-overlay", "0");
   } else {
-    root.style.removeProperty("--gym-main-bg-image");
+    root.style.removeProperty("--gym-main-bg-color");
+    root.style.removeProperty("--gym-main-bg-overlay");
+    if (theme.backgroundImageUrl && theme.backgroundImageUrl.trim()) {
+      root.style.setProperty("--gym-main-bg-image", `url(${theme.backgroundImageUrl.trim()})`);
+    } else {
+      root.style.setProperty("--gym-main-bg-image", 'url("/background.webp")');
+    }
   }
   if (isDark && theme.dark?.colors?.sidebar) {
     const s = theme.dark.colors.sidebar;

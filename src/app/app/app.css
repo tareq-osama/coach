@@ -60,8 +60,9 @@
   display: block !important;
 }
 
-/* Main app area: background image (overridable via --gym-main-bg-image from ThemeInjector) */
+/* Main app area: solid or image (--gym-main-bg-* from ThemeInjector) */
 .gym-main {
+  background-color: var(--gym-main-bg-color);
   background-image: var(--gym-main-bg-image, url("/background.webp"));
   background-size: cover;
   background-position: center;
@@ -74,6 +75,7 @@
   inset: 0;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%);
   pointer-events: none;
+  opacity: var(--gym-main-bg-overlay, 1);
 }
 .dark .gym-main::before {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 100%);

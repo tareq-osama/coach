@@ -117,5 +117,7 @@ export function deepMergeTheme(defaults, overrides) {
   if (overrides.light?.colors) assign(out.light.colors, overrides.light.colors);
   if (overrides.dark?.colors) assign(out.dark.colors, overrides.dark.colors);
   if (overrides.backgroundImageUrl !== undefined) out.backgroundImageUrl = overrides.backgroundImageUrl ?? "";
+  if (overrides.backgroundMode !== undefined) out.backgroundMode = overrides.backgroundMode === "solid" ? "solid" : "image";
+  if (overrides.backgroundSolidColor !== undefined) out.backgroundSolidColor = overrides.backgroundSolidColor ?? "#f4f4f5";
   return out;
 }
